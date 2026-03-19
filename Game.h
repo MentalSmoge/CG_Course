@@ -1,24 +1,39 @@
 #pragma once
 #include "DisplayWin32.h"
-#include "InputDevice.h"
+#include "DirectXDevice.h"
+#include <chrono>
+#include "ShaderProgram.h"
+#include "GameComponent.h"
+#include <vector>
+#include <cmath>
 class Game
 {
 public:
+	std::vector<GameComponent> triangles;
 	//backBuffer
-	//Context
-	//DebugAnnotation
+	
 	//Device
+	//Context
+	//SwapChain
+	//RenderView
+	DirectXDevice Device;
+
+	//DebugAnnotation
 	//Instance
 	//Name
-	//PrevTime
 	//RenderSRV
-	//RenderView
 	//ScreenResized
+	
 	//StartTime
-	//SwapChain
+	//PrevTime
+	std::chrono::steady_clock::time_point PrevTime;
 	//TotalTime
+	float TotalTime = 0;
+	float TotalTimeForFPS = 0;
+	unsigned int FrameCount = 0;
+
 	DisplayWin32 Display;
-	InputDevice InputDevice;
+	//InputDevice InputDevice;
 	virtual void DestroyResources();
 	virtual void Draw();
 	virtual void EndFrame();
@@ -34,4 +49,6 @@ public:
 	Game();
 private:
 	void CreateBackBuffer();
+	ID3D11RasterizerState* rastState;
+	ShaderProgram shaderProgram;
 };

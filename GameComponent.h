@@ -1,12 +1,8 @@
 #pragma once
-class GameComponent 
+#include "TriangleComponent.h"
+
+class GameComponent : public TriangleComponent
 {
 public:
-	//game
-	void DestroyResources();
-	void Draw();
-	GameComponent();
-	void Initialize();
-	void Reload();
-	void Update();
+	GameComponent(ID3D11Device* device, Vertex points[]);
 };

@@ -133,6 +133,8 @@
   <ItemGroup>
     <ClCompile Include="DirectXDevice.cpp" />
     <ClCompile Include="DisplayWin32.cpp" />
+    <ClCompile Include="Game.cpp" />
+    <ClCompile Include="GameComponent.cpp" />
     <ClCompile Include="MySuper3DApp.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>

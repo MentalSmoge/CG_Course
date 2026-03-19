@@ -64,12 +64,12 @@ int main()
 	);
 
 	//6 Create set of points
-	DirectX::XMFLOAT4 points[8] = {
+	/*DirectX::XMFLOAT4 points[8] = {
 		DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f),	DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),
 		DirectX::XMFLOAT4(-0.5f, -0.5f, 0.5f, 1.0f),	DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f),
 		DirectX::XMFLOAT4(0.5f, -0.5f, 0.5f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f),
 		DirectX::XMFLOAT4(-0.5f, 0.5f, 0.5f, 1.0f),	DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-	};
+	};*/
 
 	//7 Create vertex and index buffers
 	/*D3D11_BUFFER_DESC vertexBufDesc = {};
@@ -127,14 +127,21 @@ int main()
 	unsigned int frameCount = 0;
 
 	TriangleComponent::Vertex first_triangle[3] = {
-		{DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f),	DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)},
-		{DirectX::XMFLOAT4(-0.5f, -0.5f, 0.5f, 1.0f),	DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)},
-		{DirectX::XMFLOAT4(0.5f, -0.5f, 0.5f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)}
+		{DirectX::XMFLOAT4(0.1f, 0.2f, 0.1f, 1.0f),	DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)},
+		{DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)},
+		{DirectX::XMFLOAT4(0.1f, 0.0f, 0.1f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)}
 	};
 
-	TriangleComponent triangle(directXDevice.device, first_triangle);
+	TriangleComponent::Vertex second_triangle[3] = {
+		{DirectX::XMFLOAT4(0.1f, 0.2f, 0.1f, 1.0f),	DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)},
+		{DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)},
+		{DirectX::XMFLOAT4(0.0f, 0.2f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)}
+	};
 
-	std::vector<TriangleComponent> triangles = { triangle };
+	TriangleComponent triangle1(directXDevice.device, first_triangle);
+	TriangleComponent triangle2(directXDevice.device, second_triangle);
+
+	std::vector<TriangleComponent> triangles = { triangle1, triangle2 };
 
 	MSG msg = {};
 	bool isExitRequested = false;
