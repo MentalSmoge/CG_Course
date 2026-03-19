@@ -148,6 +148,7 @@
     <ClInclude Include="Game.h" />
     <ClInclude Include="GameComponent.h" />
     <ClInclude Include="Keys.h" />
+    <ClInclude Include="MySuper3DApp.h" />
     <ClInclude Include="ShaderProgram.h" />
     <ClInclude Include="TriangleComponent.h" />
   </ItemGroup>

@@ -1,6 +1,7 @@
 #pragma once
 #include <directxmath.h>
 #include <d3d11.h>
+#include <iterator>
 class TriangleComponent
 {
 public:
@@ -14,8 +15,7 @@ public:
 	void Draw(ID3D11DeviceContext* context);
 	Vertex points[3];
 private:
-	//rastState
-	//vertexShader
-	//vertexShaderByteCode
 	int indeces[3] = { 0, 1, 2 };
+	ID3D11Buffer* vb{};
+	ID3D11Buffer* ib{};
 };

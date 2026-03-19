@@ -16,6 +16,8 @@
 #include "ShaderProgram.h"
 #include "TriangleComponent.h"
 #include <cmath>
+#include "MySuper3DApp.h"
+#include <vector>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -70,7 +72,7 @@ int main()
 	};
 
 	//7 Create vertex and index buffers
-	D3D11_BUFFER_DESC vertexBufDesc = {};
+	/*D3D11_BUFFER_DESC vertexBufDesc = {};
 	vertexBufDesc.Usage = D3D11_USAGE_DEFAULT;
 	vertexBufDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	vertexBufDesc.CPUAccessFlags = 0;
@@ -104,7 +106,7 @@ int main()
 	directXDevice.device->CreateBuffer(&indexBufDesc, &indexData, &ib);
 
 	UINT strides[] = { 32 };
-	UINT offsets[] = { 0 };
+	UINT offsets[] = { 0 };*/
 
 
 	//10.1 Setup Rasterizer Stage 
@@ -132,6 +134,8 @@ int main()
 
 	TriangleComponent triangle(directXDevice.device, first_triangle);
 
+	std::vector<TriangleComponent> triangles = { triangle };
+
 	MSG msg = {};
 	bool isExitRequested = false;
 	float totalTimeElapsed = 0;
@@ -147,6 +151,7 @@ int main()
 			isExitRequested = true;
 		}
 
+		#pragma region SetupStateAndViewport
 		directXDevice.context->ClearState();
 
 		directXDevice.context->RSSetState(rastState);
@@ -165,11 +170,12 @@ int main()
 		//8 Setup the IA stage
 		directXDevice.context->IASetInputLayout(shaderProgram.inputLayout);
 		directXDevice.context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		directXDevice.context->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
-		directXDevice.context->IASetVertexBuffers(0, 1, &vb, strides, offsets);
 		//9 Set vertex and pixel shaders
 		directXDevice.context->VSSetShader(shaderProgram.vertexShader, nullptr, 0);
 		directXDevice.context->PSSetShader(shaderProgram.pixelShader, nullptr, 0);
+		#pragma endregion
+
+		
 
 
 		auto	curTime = std::chrono::steady_clock::now();
@@ -198,7 +204,11 @@ int main()
 		float color[] = { (std::sin(totalTimeElapsed/2) + 1.0f) / 4.0f, 0.1f, 0.1f, 1.0f };
 		directXDevice.context->ClearRenderTargetView(directXDevice.rtv, color);
 
-		directXDevice.context->DrawIndexed(6, 0, 0);
+		for (auto& triangle : triangles)
+		{
+			triangle.Update(deltaTime, totalTime);
+			triangle.Draw(directXDevice.context);
+		}
 
 		directXDevice.context->OMSetRenderTargets(0, nullptr, nullptr);
 
@@ -207,3 +217,4 @@ int main()
 
     std::cout << "Hello World!\n";
 }
+
