@@ -34,21 +34,21 @@ public:
 
 	DisplayWin32 Display;
 	//InputDevice InputDevice;
-	virtual void DestroyResources();
+	//virtual void DestroyResources();
 	virtual void Draw();
 	virtual void EndFrame();
 	virtual void Initialize();
 	virtual void PrepareFrame();
-	virtual void PrepareResources();
+	//virtual void PrepareResources();
 	virtual void Update();
-	virtual void UpdateInternal();
-	void Exit();
-	void MessageHandler();
-	void RestoreTargets();
+	//virtual void UpdateInternal();
+	//void Exit();
+	//void MessageHandler();
+	//void RestoreTargets();
 	void Run();
 	Game();
 private:
-	void CreateBackBuffer();
+	//void CreateBackBuffer();
 	ID3D11RasterizerState* rastState;
 	ShaderProgram shaderProgram;
 };

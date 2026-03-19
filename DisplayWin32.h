@@ -14,4 +14,5 @@ public:
 	HWND hWnd{};
 	//Module
 	DisplayWin32(LPCWSTR applicationName);
+	DisplayWin32() = default;
 };

@@ -1,5 +1,10 @@
 #include "Game.h"
 
+Game::Game()
+{
+	Initialize();
+}
+
 void Game::Draw()
 {
 	auto	curTime = std::chrono::steady_clock::now();

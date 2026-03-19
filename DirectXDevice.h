@@ -10,4 +10,5 @@ public:
     ID3D11DeviceContext* context = nullptr;
     IDXGISwapChain* swapChain = nullptr;
     ID3D11RenderTargetView* rtv = nullptr;
+    DirectXDevice() = default;
 };
