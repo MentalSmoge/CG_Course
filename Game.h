@@ -14,7 +14,7 @@ class DisplayWin32;
 class Game
 {
 public:
-	std::vector<GameComponent> triangles;
+	std::vector<std::shared_ptr<GameComponent>> triangles;
 	//backBuffer
 	
 	//Device

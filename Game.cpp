@@ -17,8 +17,8 @@ void Game::Draw(float deltaTime)
 
 	/*for (auto& triangle : triangles)
 	{
-		triangle.Update(deltaTime, TotalTime);
-		triangle.Draw(Device.context);
+		triangle->Update(deltaTime, TotalTime);
+		triangle->Draw(Device.context);
 	}*/
 	for(auto& [key, value] : *Objects)
 	{
@@ -120,7 +120,7 @@ void Game::Initialize()
 	/*triangle3->transform.position.x += 1;
 	triangle4->transform.position.x += 1;*/
 
-	//triangles = { triangle1, triangle2 };
+	//triangles = { triangle1, triangle2, triangle3, triangle4};
 
 	GameObject player_1({ triangle1, triangle2 });
 	GameObject player_2({ triangle3, triangle4 });
@@ -129,7 +129,8 @@ void Game::Initialize()
 	Objects->insert({ "player_1", player_1 });
 	Objects->insert({ "player_2", player_2 });
 
-	//player_2.move({ 10, 0, 0 });
+	player_1.move({ -0.75f, 0, 0 });
+	player_2.move({ 0.75f, 0, 0 });
 }
 
 void Game::PrepareFrame()
