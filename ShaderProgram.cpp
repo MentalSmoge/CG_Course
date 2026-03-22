@@ -75,7 +75,7 @@ bool ShaderProgram::CompileShader(
             errorBlob->Release();
         }
         // If there was  nothing in the error message then it simply could not find the shader file itself.
-        else std::cout << L"Missing Shader File\n";
+        //else std::cout << L"Missing Shader File\n";
         return false;
     }
 

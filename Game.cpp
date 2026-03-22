@@ -1,40 +1,29 @@
 #include "Game.h"
+#include "InputDevice.h"
+#include "DisplayWin32.h"
+#include <iostream>
 
 Game::Game()
 {
 	Initialize();
 }
 
-void Game::Draw()
+void Game::Draw(float deltaTime)
 {
-	auto	curTime = std::chrono::steady_clock::now();
-	float	deltaTime = std::chrono::duration_cast<std::chrono::microseconds>(curTime - PrevTime).count() / 1000000.0f;
-	PrevTime = curTime;
-	TotalTime += deltaTime;
-
-	TotalTimeForFPS += deltaTime;
-	FrameCount++;
-
-	if (TotalTimeForFPS > 1.0f) {
-		float fps = FrameCount / TotalTimeForFPS;
-
-		TotalTimeForFPS -= 1.0f;
-
-		WCHAR text[256];
-		swprintf_s(text, TEXT("FPS: %f"), fps);
-		SetWindowText(Display.hWnd, text);
-
-		FrameCount = 0;
-	}
 	Device.context->OMSetRenderTargets(1, &Device.rtv, nullptr);
 
 	float color[] = { (std::sin(TotalTime / 2) + 1.0f) / 4.0f, 0.1f, 0.1f, 1.0f };
 	Device.context->ClearRenderTargetView(Device.rtv, color);
 
-	for (auto& triangle : triangles)
+	/*for (auto& triangle : triangles)
 	{
 		triangle.Update(deltaTime, TotalTime);
 		triangle.Draw(Device.context);
+	}*/
+	for(auto& [key, value] : *Objects)
+	{
+		value.Update(deltaTime, TotalTime);
+		value.Draw(Device.context);
 	}
 }
 
@@ -49,9 +38,11 @@ void Game::Initialize()
 {
 	//1 Create a Window
 	LPCWSTR applicationName = L"My3DApp";
-	Display = DisplayWin32(applicationName);
+	Display = new DisplayWin32(applicationName, this);
+	Device = DirectXDevice(Display->hWnd, Display->ClientWidth, Display->ClientHeight);
+	Input = new InputDevice(this);
+	Objects = new std::map<std::string, GameObject>();
 	//2 Create Device with the SwapChain
-	Device = DirectXDevice(Display.hWnd, Display.ClientWidth, Display.ClientHeight);
 	//4 Compile the Shaders
 	D3D11_INPUT_ELEMENT_DESC inputElements[] = {
 	D3D11_INPUT_ELEMENT_DESC {
@@ -103,10 +94,42 @@ void Game::Initialize()
 		{DirectX::XMFLOAT4(0.0f, 0.2f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)}
 	};
 
-	GameComponent triangle1(Device.device, first_triangle);
-	GameComponent triangle2(Device.device, second_triangle);
+	auto triangle1 = std::make_shared<GameComponent>(Device.device, first_triangle);
+	auto triangle2 = std::make_shared<GameComponent>(Device.device, second_triangle);
 
-	triangles = { triangle1, triangle2 };
+
+
+	GameComponent::Vertex third_triangle[3] = {
+		{DirectX::XMFLOAT4(0.1f, 0.2f, 0.1f, 1.0f),	DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)},
+		{DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)},
+		{DirectX::XMFLOAT4(0.1f, 0.0f, 0.1f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)}
+	};
+
+	GameComponent::Vertex fourth_triangle[3] = {
+		{DirectX::XMFLOAT4(0.1f, 0.2f, 0.1f, 1.0f),	DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)},
+		{DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)},
+		{DirectX::XMFLOAT4(0.0f, 0.2f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)}
+	};
+
+
+	auto triangle3 = std::make_shared<GameComponent>(Device.device, third_triangle);
+	auto triangle4 = std::make_shared<GameComponent>(Device.device, fourth_triangle);
+	//GameComponent triangle3(Device.device, third_triangle);
+	//GameComponent triangle4(Device.device, fourth_triangle);
+
+	/*triangle3->transform.position.x += 1;
+	triangle4->transform.position.x += 1;*/
+
+	//triangles = { triangle1, triangle2 };
+
+	GameObject player_1({ triangle1, triangle2 });
+	GameObject player_2({ triangle3, triangle4 });
+	//GameObject player_2(std::vector<GameComponent*> {&triangle3, &triangle4});
+
+	Objects->insert({ "player_1", player_1 });
+	Objects->insert({ "player_2", player_2 });
+
+	//player_2.move({ 10, 0, 0 });
 }
 
 void Game::PrepareFrame()
@@ -117,8 +140,8 @@ void Game::PrepareFrame()
 
 	//10.2 Setup ViewPort
 	D3D11_VIEWPORT viewport = {};
-	viewport.Width = static_cast<float>(Display.ClientWidth);
-	viewport.Height = static_cast<float>(Display.ClientHeight);
+	viewport.Width = static_cast<float>(Display->ClientWidth);
+	viewport.Height = static_cast<float>(Display->ClientHeight);
 	viewport.TopLeftX = 0;
 	viewport.TopLeftY = 0;
 	viewport.MinDepth = 0;
@@ -134,19 +157,66 @@ void Game::PrepareFrame()
 	Device.context->PSSetShader(shaderProgram.pixelShader, nullptr, 0);
 }
 
-void Game::Update()
+void Game::Update(float deltaTime)
 {
-	
-	/*for (auto& triangle : triangles)
+	float speed = 0.5f * deltaTime; // скорость движения
+
+	// Игрок 1 (WASD)
+	if (Input->IsKeyDown(Keys::W))
 	{
-		triangle.Update(deltaTime, TotalTime);
-	}*/
+		(*Objects)["player_1"].move({ 0, speed, 0 });
+		std::cout << (*Objects)["player_1"].visual[0]->transform.position.y << "\n";
+	}
+
+	if (Input->IsKeyDown(Keys::S))
+	{
+		(*Objects)["player_1"].move({ 0, -speed, 0 });
+		std::cout << (*Objects)["player_1"].visual[0]->transform.position.y << "\n";
+	}
+
+	//// Игрок 2 (стрелки)
+	if (Input->IsKeyDown(Keys::Up))
+	{
+		(*Objects)["player_2"].move({ 0, speed, 0 });
+		std::cout << (*Objects)["player_2"].visual[0]->transform.position.y << "\n";
+	}
+
+	if (Input->IsKeyDown(Keys::Down))
+	{
+		(*Objects)["player_2"].move({ 0, -speed, 0 });
+		std::cout << (*Objects)["player_2"].visual[0]->transform.position.y << "\n";
+	}
+	//if (InputDevice->IsKeyDown(Keys::Up))
+	//	player2.y += speed;
+
+	//if (InputDevice->IsKeyDown(Keys::Down))
+	//	player2.y -= speed;
 }
 
 void Game::Run()
 {
 	PrepareFrame();
-	Update();
-	Draw();
+
+	auto	curTime = std::chrono::steady_clock::now();
+	float	deltaTime = std::chrono::duration_cast<std::chrono::microseconds>(curTime - PrevTime).count() / 1000000.0f;
+	PrevTime = curTime;
+	TotalTime += deltaTime;
+
+	TotalTimeForFPS += deltaTime;
+	FrameCount++;
+
+	if (TotalTimeForFPS > 1.0f) {
+		float fps = FrameCount / TotalTimeForFPS;
+
+		TotalTimeForFPS -= 1.0f;
+
+		WCHAR text[256];
+		swprintf_s(text, TEXT("FPS: %f"), fps);
+		SetWindowText(Display->hWnd, text);
+
+		FrameCount = 0;
+	}
+	Update(deltaTime);
+	Draw(deltaTime);
 	EndFrame();
 }

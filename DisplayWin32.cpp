@@ -1,10 +1,19 @@
 #include "DisplayWin32.h"
 #include <iostream>
-
+#include "Game.h"
 LRESULT CALLBACK WndProc(HWND hwnd, UINT umessage, WPARAM wparam, LPARAM lparam)
 {
+	Game* game = (Game*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 	switch (umessage)
 	{
+	case WM_CREATE:
+	{
+		CREATESTRUCT* cs = (CREATESTRUCT*)lparam;
+		Game* game = (Game*)cs->lpCreateParams;
+
+		SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)game);
+		return 0;
+	}
 	case WM_KEYDOWN:
 	{
 		// If a key is pressed send it to the input object so it can record that state.
@@ -14,14 +23,65 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT umessage, WPARAM wparam, LPARAM lparam)
 		if (static_cast<unsigned int>(wparam) == 27) PostQuitMessage(0);
 		return 0;
 	}
-	default:
-		{
-			return DefWindowProc(hwnd, umessage, wparam, lparam);
+
+	case WM_INPUT:
+	{
+		UINT dwSize = 0;
+		GetRawInputData(reinterpret_cast<HRAWINPUT>(lparam), RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
+		LPBYTE lpb = new BYTE[dwSize];
+		if (lpb == nullptr) {
+			return 0;
 		}
+
+		if (GetRawInputData((HRAWINPUT)lparam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize)
+			OutputDebugString(TEXT("GetRawInputData does not return correct size !\n"));
+
+		RAWINPUT* raw = reinterpret_cast<RAWINPUT*>(lpb);
+
+		if (raw->header.dwType == RIM_TYPEKEYBOARD)
+		{
+			/*printf(" Kbd: make=%04i Flags:%04i Reserved:%04i ExtraInformation:%08i, msg=%04i VK=%i \n",
+				raw->data.keyboard.MakeCode,
+				raw->data.keyboard.Flags,
+				raw->data.keyboard.Reserved,
+				raw->data.keyboard.ExtraInformation,
+				raw->data.keyboard.Message,
+				raw->data.keyboard.VKey);*/
+
+			game->Input->OnKeyDown({
+				raw->data.keyboard.MakeCode,
+				raw->data.keyboard.Flags,
+				raw->data.keyboard.VKey,
+				raw->data.keyboard.Message
+				});
+		}
+		else if (raw->header.dwType == RIM_TYPEMOUSE)
+		{
+			//std::cout << game->Input << "SAS " << std::endl;
+			//printf(" Mouse: X=%04d Y:%04d \n", raw->data.mouse.lLastX, raw->data.mouse.lLastY);
+			game->Input->OnMouseMove({
+				raw->data.mouse.usFlags,
+				raw->data.mouse.usButtonFlags,
+				static_cast<int>(raw->data.mouse.ulExtraInformation),
+				static_cast<int>(raw->data.mouse.ulRawButtons),
+				static_cast<short>(raw->data.mouse.usButtonData),
+				raw->data.mouse.lLastX,
+				raw->data.mouse.lLastY
+				});
+		}
+
+		delete[] lpb;
+		return DefWindowProc(hwnd, umessage, wparam, lparam);
+	}
+
+	default:
+	{
+		return DefWindowProc(hwnd, umessage, wparam, lparam);
+	}
 	}
 }
 
-DisplayWin32::DisplayWin32(LPCWSTR applicationName)
+DisplayWin32::DisplayWin32(LPCWSTR applicationName, Game* game)
 {
 	HINSTANCE hInstance = GetModuleHandle(nullptr);
 	wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
@@ -55,7 +115,7 @@ DisplayWin32::DisplayWin32(LPCWSTR applicationName)
 		posX, posY,
 		windowRect.right - windowRect.left,
 		windowRect.bottom - windowRect.top,
-		nullptr, nullptr, hInstance, nullptr);
+		nullptr, nullptr, hInstance, game);
 	if (hWnd)
 	{
 		RECT clientRect;
