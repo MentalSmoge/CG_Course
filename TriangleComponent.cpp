@@ -52,7 +52,7 @@ void TriangleComponent::Draw(ID3D11DeviceContext* context)
 {
     UINT stride = sizeof(Vertex);
     UINT offset = 0;
-    context->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
+	context->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
     context->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
 
 	VSConstants data = {};

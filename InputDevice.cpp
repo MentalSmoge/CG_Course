@@ -75,12 +75,12 @@ void InputDevice::OnMouseMove(RawMouseEventArgs args)
 
 	const MouseMoveEventArgs moveArgs = {MousePosition, MouseOffset, MouseWheelDelta};
 
-	printf(" Mouse: posX=%04.4f posY:%04.4f offsetX:%04.4f offsetY:%04.4f, wheelDelta=%04d \n",
+	/*printf(" Mouse: posX=%04.4f posY:%04.4f offsetX:%04.4f offsetY:%04.4f, wheelDelta=%04d \n",
 		MousePosition.x,
 		MousePosition.y,
 		MouseOffset.x,
 		MouseOffset.y,
-		MouseWheelDelta);
+		MouseWheelDelta);*/
 	
 	MouseMove.Broadcast(moveArgs);
 }

@@ -7,6 +7,13 @@ Game::Game()
 {
 	Initialize();
 }
+enum Game::GoalResult
+{
+	None,
+	Player1Scored,
+	Player2Scored
+};
+XMFLOAT3 ball_default_velocity = XMFLOAT3(0.5f, 0.0f, 0.0f);
 
 void Game::Draw(float deltaTime)
 {
@@ -42,6 +49,9 @@ void Game::Initialize()
 	Device = DirectXDevice(Display->hWnd, Display->ClientWidth, Display->ClientHeight);
 	Input = new InputDevice(this);
 	Objects = new std::map<std::string, GameObject>();
+	Leaderboard = new std::map<std::string, int>();
+	Leaderboard->insert({ "player_1", 0});
+	Leaderboard->insert({ "player_2", 0});
 	//2 Create Device with the SwapChain
 	//4 Compile the Shaders
 	D3D11_INPUT_ELEMENT_DESC inputElements[] = {
@@ -80,57 +90,98 @@ void Game::Initialize()
 	Device.context->RSSetState(rastState);
 
 	PrevTime = std::chrono::steady_clock::now();
-
-
+	#pragma region Players Creation
+	DirectX::XMFLOAT4 color_1 = DirectX::XMFLOAT4(0.46f, 0.65f, 0.26f, 1.0f);
 	GameComponent::Vertex first_triangle[3] = {
-		{DirectX::XMFLOAT4(0.1f, 0.2f, 0.1f, 1.0f),	DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)},
-		{DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)},
-		{DirectX::XMFLOAT4(0.1f, 0.0f, 0.1f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)}
+	{DirectX::XMFLOAT4(0.05f, 0.1f, 0.1f, 1.0f),	color_1},
+	{DirectX::XMFLOAT4(-0.05f, -0.1f, 0.0f, 1.0f),	color_1},
+	{DirectX::XMFLOAT4(0.05f, -0.1f, 0.1f, 1.0f),	color_1}
 	};
 
 	GameComponent::Vertex second_triangle[3] = {
-		{DirectX::XMFLOAT4(0.1f, 0.2f, 0.1f, 1.0f),	DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)},
-		{DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)},
-		{DirectX::XMFLOAT4(0.0f, 0.2f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)}
+		{DirectX::XMFLOAT4(0.05f, 0.1f, 0.1f, 1.0f),	color_1},
+		{DirectX::XMFLOAT4(-0.05f, -0.1f, 0.0f, 1.0f),	color_1},
+		{DirectX::XMFLOAT4(-0.05f, 0.1f, 0.0f, 1.0f),	color_1}
+	};
+
+	DirectX::XMFLOAT4 color_2 = DirectX::XMFLOAT4(0.31f, 0.56f, 0.73f, 1.0f);
+	GameComponent::Vertex third_triangle[3] = {
+	{DirectX::XMFLOAT4(0.05f, 0.1f, 0.1f, 1.0f),	color_2},
+	{DirectX::XMFLOAT4(-0.05f, -0.1f, 0.0f, 1.0f),	color_2},
+	{DirectX::XMFLOAT4(0.05f, -0.1f, 0.1f, 1.0f),	color_2}
+	};
+
+	GameComponent::Vertex fourth_triangle[3] = {
+		{DirectX::XMFLOAT4(0.05f, 0.1f, 0.1f, 1.0f),	color_2},
+		{DirectX::XMFLOAT4(-0.05f, -0.1f, 0.0f, 1.0f),	color_2},
+		{DirectX::XMFLOAT4(-0.05f, 0.1f, 0.0f, 1.0f),	color_2}
 	};
 
 	auto triangle1 = std::make_shared<GameComponent>(Device.device, first_triangle);
 	auto triangle2 = std::make_shared<GameComponent>(Device.device, second_triangle);
-
-
-
-	GameComponent::Vertex third_triangle[3] = {
-		{DirectX::XMFLOAT4(0.1f, 0.2f, 0.1f, 1.0f),	DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)},
-		{DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)},
-		{DirectX::XMFLOAT4(0.1f, 0.0f, 0.1f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)}
-	};
-
-	GameComponent::Vertex fourth_triangle[3] = {
-		{DirectX::XMFLOAT4(0.1f, 0.2f, 0.1f, 1.0f),	DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)},
-		{DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)},
-		{DirectX::XMFLOAT4(0.0f, 0.2f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)}
-	};
-
-
 	auto triangle3 = std::make_shared<GameComponent>(Device.device, third_triangle);
 	auto triangle4 = std::make_shared<GameComponent>(Device.device, fourth_triangle);
-	//GameComponent triangle3(Device.device, third_triangle);
-	//GameComponent triangle4(Device.device, fourth_triangle);
-
-	/*triangle3->transform.position.x += 1;
-	triangle4->transform.position.x += 1;*/
-
-	//triangles = { triangle1, triangle2, triangle3, triangle4};
 
 	GameObject player_1({ triangle1, triangle2 });
 	GameObject player_2({ triangle3, triangle4 });
-	//GameObject player_2(std::vector<GameComponent*> {&triangle3, &triangle4});
-
-	Objects->insert({ "player_1", player_1 });
-	Objects->insert({ "player_2", player_2 });
-
+	player_1.physics = PhysicsComponent(XMFLOAT3(0.0f, 0.0f, 0.0f), { 0.05f, 0.1f });
+	player_2.physics = PhysicsComponent(XMFLOAT3(0.0f, 0.0f, 0.0f), { 0.05f, 0.1f });
+	player_1.physics.mass = 1.0f;
+	player_2.physics.mass = 1.0f;
+	player_1.UpdateBoundingBox();
+	player_2.UpdateBoundingBox();
 	player_1.move({ -0.75f, 0, 0 });
 	player_2.move({ 0.75f, 0, 0 });
+	Objects->insert({ "player_1", player_1 });
+	Objects->insert({ "player_2", player_2 });
+	#pragma endregion
+
+	#pragma region Ball Creation
+	DirectX::XMFLOAT4 color_3 = DirectX::XMFLOAT4(0.65f, 0.19f, 0.19f, 1.0f);
+
+	GameComponent::Vertex ball_1[3] = {
+		{DirectX::XMFLOAT4(0.05f, 0.05f, 0.1f, 1.0f),	color_3},
+		{DirectX::XMFLOAT4(-0.05f, -0.05f, 0.0f, 1.0f),	color_3},
+		{DirectX::XMFLOAT4(0.05f, -0.05f, 0.1f, 1.0f),	color_3}
+	};
+	GameComponent::Vertex ball_2[3] = {
+		{DirectX::XMFLOAT4(0.05f, 0.05f, 0.1f, 1.0f),	color_3},
+		{DirectX::XMFLOAT4(-0.05f, -0.05f, 0.0f, 1.0f),	color_3},
+		{DirectX::XMFLOAT4(-0.05f, 0.05f, 0.1f, 1.0f),	color_3}
+	};
+	auto ball1 = std::make_shared<GameComponent>(Device.device, ball_1);
+	auto ball2 = std::make_shared<GameComponent>(Device.device, ball_2);
+	GameObject ball({ ball1, ball2 });
+	ball.physics = PhysicsComponent(ball_default_velocity, { 0.05f, 0.05f });
+	ball.physics.mass = 1.0f;
+	ball.UpdateBoundingBox();
+
+	Objects->insert({ "ball", ball });
+	#pragma endregion
+
+	#pragma region Walls Creation
+	GameComponent::Vertex first_wall[3] = {
+		{DirectX::XMFLOAT4(2.05f, 0.1f, 0.1f, 1.0f),	DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)},
+		{DirectX::XMFLOAT4(-2.05f, -0.1f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)},
+		{DirectX::XMFLOAT4(2.05f, -0.1f, 0.1f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)}
+	};
+
+	GameComponent::Vertex second_wall[3] = {
+		{DirectX::XMFLOAT4(2.05f, 0.1f, 0.1f, 1.0f),	DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)},
+		{DirectX::XMFLOAT4(-2.05f, -0.1f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)},
+		{DirectX::XMFLOAT4(-2.05f, 0.1f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)}
+	};
+	auto wall1 = std::make_shared<GameComponent>(Device.device, first_wall);
+	auto wall2 = std::make_shared<GameComponent>(Device.device, second_wall);
+	auto wall3 = std::make_shared<GameComponent>(Device.device, first_wall);
+	auto wall4 = std::make_shared<GameComponent>(Device.device, second_wall);
+	GameObject wall_1({ wall1, wall2 });
+	GameObject wall_2({ wall3, wall4 });
+	wall_1.move({ 0, 0.60f, 0 });
+	wall_2.move({ 0, -0.60f, 0 });
+	Objects->insert({ "wall_1", wall_1 });
+	Objects->insert({ "wall_2", wall_2 });
+	#pragma endregion
 }
 
 void Game::PrepareFrame()
@@ -166,32 +217,88 @@ void Game::Update(float deltaTime)
 	if (Input->IsKeyDown(Keys::W))
 	{
 		(*Objects)["player_1"].move({ 0, speed, 0 });
-		std::cout << (*Objects)["player_1"].visual[0]->transform.position.y << "\n";
 	}
 
 	if (Input->IsKeyDown(Keys::S))
 	{
 		(*Objects)["player_1"].move({ 0, -speed, 0 });
-		std::cout << (*Objects)["player_1"].visual[0]->transform.position.y << "\n";
 	}
+	ClampPlayerY((*Objects)["player_1"], 0.5f, -0.5f, speed);
 
-	//// Игрок 2 (стрелки)
+	// Игрок 2 (стрелки)
 	if (Input->IsKeyDown(Keys::Up))
 	{
 		(*Objects)["player_2"].move({ 0, speed, 0 });
-		std::cout << (*Objects)["player_2"].visual[0]->transform.position.y << "\n";
 	}
 
 	if (Input->IsKeyDown(Keys::Down))
 	{
 		(*Objects)["player_2"].move({ 0, -speed, 0 });
-		std::cout << (*Objects)["player_2"].visual[0]->transform.position.y << "\n";
 	}
-	//if (InputDevice->IsKeyDown(Keys::Up))
-	//	player2.y += speed;
+	ClampPlayerY((*Objects)["player_2"], 0.5f, -0.5f, speed);
 
-	//if (InputDevice->IsKeyDown(Keys::Down))
-	//	player2.y -= speed;
+	if ((*Objects)["ball"].CheckCollision((*Objects)["player_2"]))
+	{
+		(*Objects)["ball"].ResolveCollision((*Objects)["player_2"], deltaTime);
+	}
+
+	if ((*Objects)["ball"].CheckCollision((*Objects)["player_1"]))
+	{
+		(*Objects)["ball"].ResolveCollision((*Objects)["player_1"], deltaTime);
+	}
+	(*Objects)["ball"].HandleWallCollision(0.5f, -0.5f);
+	auto result = CheckGoal((*Objects)["ball"], -0.8f, 0.8f);
+	if (result == GoalResult::Player1Scored)
+	{
+		(*Objects)["ball"].move_teleport({ 0,0,0 });
+		(*Objects)["ball"].physics.velocity = ball_default_velocity;
+		(*Leaderboard)["player_1"] += 1;
+		std::cout << "Goal by Player 1.   " << (*Leaderboard)["player_1"] << ":" << (*Leaderboard)["player_2"] << "\n";
+	};
+	if (result == GoalResult::Player2Scored)
+	{
+		(*Objects)["ball"].move_teleport({ 0,0,0 });
+		(*Objects)["ball"].physics.velocity = ball_default_velocity;
+		(*Leaderboard)["player_2"] += 1;
+		std::cout << "Goal by Player 2.   " << (*Leaderboard)["player_1"] << ":" << (*Leaderboard)["player_2"] << "\n";
+	};
+
+}
+
+void Game::ClampPlayerY(GameObject& player, float topBound, float bottomBound, float speed)
+{
+	float& y = player.position.y;
+	float halfHeight = player.physics.size.y;
+
+	if (y + halfHeight > topBound)
+	{
+		player.move({ 0,-speed,0 });
+	}
+
+	if (y - halfHeight < bottomBound)
+	{
+		player.move({ 0,speed,0 });
+	}
+
+	player.UpdateBoundingBox();
+}
+
+Game::GoalResult Game::CheckGoal(GameObject& ball, float leftBound, float rightBound)
+{
+	float ballX = ball.position.x;
+	float halfWidth = ball.physics.size.x;
+
+	if (ballX + halfWidth < leftBound)
+	{
+		return GoalResult::Player2Scored;
+	}
+
+	if (ballX - halfWidth > rightBound)
+	{
+		return GoalResult::Player1Scored;
+	}
+
+	return GoalResult::None;
 }
 
 void Game::Run()

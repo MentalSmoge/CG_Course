@@ -46,6 +46,7 @@ public:
 	virtual void PrepareFrame();
 	//virtual void PrepareResources();
 	virtual void Update(float deltaTime);
+	void ClampPlayerY(GameObject& player, float topBound, float bottomBound, float speed);
 	//virtual void UpdateInternal();
 	//void Exit();
 	//void MessageHandler();
@@ -53,6 +54,9 @@ public:
 	void Run();
 	Game();
 	std::map<std::string, GameObject>* Objects;
+	std::map<std::string, int>* Leaderboard;
+	enum GoalResult;
+	GoalResult CheckGoal(GameObject& ball, float leftBound, float rightBound);
 private:
 	//void CreateBackBuffer();
 	ID3D11RasterizerState* rastState;
