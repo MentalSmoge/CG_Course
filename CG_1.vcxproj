@@ -150,6 +150,7 @@
     <FxCompile Include="Shaders\MyVeryFirstShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="Delegates.h" />
     <ClInclude Include="DirectXDevice.h" />
     <ClInclude Include="DisplayWin32.h" />
