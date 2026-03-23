@@ -19,14 +19,9 @@ void Game::Draw(float deltaTime)
 {
 	Device.context->OMSetRenderTargets(1, &Device.rtv, nullptr);
 
-	float color[] = { (std::sin(TotalTime / 2) + 1.0f) / 4.0f, 0.1f, 0.1f, 1.0f };
+	float color[] = { (std::sin(TotalTime / 2) + 0.1f) / 4.0f, 0.1f, 0.1f, 1.0f };
 	Device.context->ClearRenderTargetView(Device.rtv, color);
 
-	/*for (auto& triangle : triangles)
-	{
-		triangle->Update(deltaTime, TotalTime);
-		triangle->Draw(Device.context);
-	}*/
 	for(auto& [key, value] : *Objects)
 	{
 		value.Update(deltaTime, TotalTime);
@@ -160,16 +155,17 @@ void Game::Initialize()
 	#pragma endregion
 
 	#pragma region Walls Creation
+	DirectX::XMFLOAT4 color_4 = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	GameComponent::Vertex first_wall[3] = {
-		{DirectX::XMFLOAT4(2.05f, 0.1f, 0.1f, 1.0f),	DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)},
-		{DirectX::XMFLOAT4(-2.05f, -0.1f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)},
-		{DirectX::XMFLOAT4(2.05f, -0.1f, 0.1f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)}
+		{DirectX::XMFLOAT4(2.05f, 0.1f, 0.1f, 1.0f),	color_4},
+		{DirectX::XMFLOAT4(-2.05f, -0.1f, 0.0f, 1.0f),	color_4},
+		{DirectX::XMFLOAT4(2.05f, -0.1f, 0.1f, 1.0f),	color_4}
 	};
 
 	GameComponent::Vertex second_wall[3] = {
-		{DirectX::XMFLOAT4(2.05f, 0.1f, 0.1f, 1.0f),	DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)},
-		{DirectX::XMFLOAT4(-2.05f, -0.1f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)},
-		{DirectX::XMFLOAT4(-2.05f, 0.1f, 0.0f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)}
+		{DirectX::XMFLOAT4(2.05f, 0.1f, 0.1f, 1.0f),	color_4},
+		{DirectX::XMFLOAT4(-2.05f, -0.1f, 0.0f, 1.0f),	color_4},
+		{DirectX::XMFLOAT4(-2.05f, 0.1f, 0.0f, 1.0f),	color_4}
 	};
 	auto wall1 = std::make_shared<GameComponent>(Device.device, first_wall);
 	auto wall2 = std::make_shared<GameComponent>(Device.device, second_wall);
