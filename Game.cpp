@@ -39,7 +39,7 @@ void Game::EndFrame()
 void Game::Initialize()
 {
 	//1 Create a Window
-	LPCWSTR applicationName = L"My3DApp";
+	LPCWSTR applicationName = L"Pong";
 	Display = new DisplayWin32(applicationName, this);
 	Device = DirectXDevice(Display->hWnd, Display->ClientWidth, Display->ClientHeight);
 	Input = new InputDevice(this);
@@ -134,19 +134,28 @@ void Game::Initialize()
 	#pragma region Ball Creation
 	DirectX::XMFLOAT4 color_3 = DirectX::XMFLOAT4(0.65f, 0.19f, 0.19f, 1.0f);
 
-	GameComponent::Vertex ball_1[3] = {
-		{DirectX::XMFLOAT4(0.05f, 0.05f, 0.1f, 1.0f),	color_3},
-		{DirectX::XMFLOAT4(-0.05f, -0.05f, 0.0f, 1.0f),	color_3},
-		{DirectX::XMFLOAT4(0.05f, -0.05f, 0.1f, 1.0f),	color_3}
-	};
-	GameComponent::Vertex ball_2[3] = {
-		{DirectX::XMFLOAT4(0.05f, 0.05f, 0.1f, 1.0f),	color_3},
-		{DirectX::XMFLOAT4(-0.05f, -0.05f, 0.0f, 1.0f),	color_3},
-		{DirectX::XMFLOAT4(-0.05f, 0.05f, 0.1f, 1.0f),	color_3}
-	};
-	auto ball1 = std::make_shared<GameComponent>(Device.device, ball_1);
-	auto ball2 = std::make_shared<GameComponent>(Device.device, ball_2);
-	GameObject ball({ ball1, ball2 });
+	std::vector<std::shared_ptr<GameComponent>> ball_components;
+	float radius = 0.05f;
+	int sides = 16;
+
+	for (int i = 0; i < sides; i++) {
+		float angle1 = 2.0f * 3.14f * i / sides;
+		float angle2 = 2.0f * 3.14f * (i + 1) / sides;
+
+		float x1 = radius * cos(angle1);
+		float z1 = radius * sin(angle1);
+		float x2 = radius * cos(angle2);
+		float z2 = radius * sin(angle2);
+
+		GameComponent::Vertex triangle[3] = {
+			{DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f), color_3},
+			{DirectX::XMFLOAT4(x1, z1, 0, 1.0f), color_3},
+			{DirectX::XMFLOAT4(x2, z2, 0, 1.0f), color_3}
+		};
+		ball_components.push_back(std::make_shared<GameComponent>(Device.device, triangle));
+	}
+
+	GameObject ball(ball_components);
 	ball.physics = PhysicsComponent(ball_default_velocity, { 0.05f, 0.05f });
 	ball.physics.mass = 1.0f;
 	ball.UpdateBoundingBox();
