@@ -9,11 +9,20 @@
 #include <map>
 #include <string>
 #include "GameObject.h"
+#include "Camera.h"
 class InputDevice;
 class DisplayWin32;
 class Game
 {
 public:
+	struct CameraBuffer
+	{
+		DirectX::XMMATRIX view;
+		DirectX::XMMATRIX proj;
+		DirectX::XMMATRIX viewProj;
+	};
+	ID3D11Buffer* cameraCB = nullptr;
+	ID3D11Buffer* worldCB = nullptr;
 	std::vector<std::shared_ptr<GameComponent>> triangles;
 	//backBuffer
 	
@@ -57,6 +66,7 @@ public:
 	std::map<std::string, int>* Leaderboard;
 	enum GoalResult;
 	GoalResult CheckGoal(GameObject& ball, float leftBound, float rightBound);
+	Camera mCam{};
 private:
 	//void CreateBackBuffer();
 	ID3D11RasterizerState* rastState;

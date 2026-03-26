@@ -132,6 +132,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Delegates.cpp" />
     <ClCompile Include="DirectXDevice.cpp" />
     <ClCompile Include="DisplayWin32.cpp" />

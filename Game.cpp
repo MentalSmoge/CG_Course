@@ -17,6 +17,20 @@ XMFLOAT3 ball_default_velocity = XMFLOAT3(0.5f, 0.0f, 0.0f);
 
 void Game::Draw(float deltaTime)
 {
+	mCam.UpdateViewMatrix();
+	CameraBuffer cb;
+	cb.view = DirectX::XMMatrixTranspose(mCam.View());
+	cb.proj = DirectX::XMMatrixTranspose(mCam.Proj());
+	cb.viewProj = DirectX::XMMatrixTranspose(mCam.ViewProj());
+
+	Device.context->UpdateSubresource(cameraCB, 0, nullptr, &cb, 0, 0);
+	Device.context->VSSetConstantBuffers(0, 1, &cameraCB);
+
+
+
+
+
+
 	Device.context->OMSetRenderTargets(1, &Device.rtv, nullptr);
 
 	float color[] = { (std::sin(TotalTime / 2) + 0.1f) / 4.0f, 0.1f, 0.1f, 1.0f };
@@ -39,7 +53,7 @@ void Game::EndFrame()
 void Game::Initialize()
 {
 	//1 Create a Window
-	LPCWSTR applicationName = L"My3DApp";
+	LPCWSTR applicationName = L"Planets";
 	Display = new DisplayWin32(applicationName, this);
 	Device = DirectXDevice(Display->hWnd, Display->ClientWidth, Display->ClientHeight);
 	Input = new InputDevice(this);
@@ -47,6 +61,33 @@ void Game::Initialize()
 	Leaderboard = new std::map<std::string, int>();
 	Leaderboard->insert({ "player_1", 0});
 	Leaderboard->insert({ "player_2", 0});
+
+	mCam.SetPosition(0.0f, 0.0f, -2.0f);
+
+	mCam.LookAt(
+		DirectX::XMVectorSet(0, 0, -2, 1),
+		DirectX::XMVectorZero(),
+		DirectX::XMVectorSet(0, 1, 0, 0)
+	);
+
+	mCam.SetLens(
+		0.25f * DirectX::XM_PI,
+		(float)Display->ClientWidth / Display->ClientHeight,
+		0.1f,
+		100.0f
+	);
+
+
+
+	D3D11_BUFFER_DESC cbd = {};
+	cbd.Usage = D3D11_USAGE_DEFAULT;
+	cbd.ByteWidth = sizeof(CameraBuffer);
+	cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+	Device.device->CreateBuffer(&cbd, nullptr, &cameraCB);
+
+
+
 	//2 Create Device with the SwapChain
 	//4 Compile the Shaders
 	D3D11_INPUT_ELEMENT_DESC inputElements[] = {
@@ -207,6 +248,32 @@ void Game::PrepareFrame()
 
 void Game::Update(float deltaTime)
 {
+	if (Input->IsKeyDown(Keys::W))
+	{
+		mCam.Walk(10.0f * deltaTime);
+	}
+
+	if (Input->IsKeyDown(Keys::S))
+	{
+		mCam.Walk(-10.0f * deltaTime);
+	}
+	if (Input->IsKeyDown(Keys::A))
+	{
+		mCam.Strafe(-10.0f * deltaTime);
+	}
+
+	if (Input->IsKeyDown(Keys::D))
+	{
+		mCam.Strafe(10.0f * deltaTime);
+	}
+
+
+
+
+
+
+
+
 	float speed = 0.5f * deltaTime; // скорость движения
 
 	// Игрок 1 (WASD)
