@@ -2,8 +2,10 @@
 #include "InputDevice.h"
 #include "DisplayWin32.h"
 #include <iostream>
+#include <algorithm>
 ID3D11Texture2D* depthStencilBuffer = nullptr;
 ID3D11DepthStencilView* depthStencilView = nullptr;
+bool orbiting_camera = false;
 Game::Game()
 {
 	Initialize();
@@ -79,7 +81,7 @@ void Game::EndFrame()
 	Device.swapChain->Present(1, /*DXGI_PRESENT_DO_NOT_WAIT*/ 0);
 }
 
-std::vector<GameComponent::Vertex> CreateBox(float w, float h, float d)
+std::vector<GameComponent::Vertex> CreateBox(float w, float h, float d, XMFLOAT4 color)
 {
 	float hw = w * 0.5f;
 	float hh = h * 0.5f;
@@ -87,17 +89,16 @@ std::vector<GameComponent::Vertex> CreateBox(float w, float h, float d)
 
 	using V = GameComponent::Vertex;
 
-	// 8 вершин куба (каждая со своим цветом)
 	V v[8] =
 	{
-		{{-hw,-hh,-hd,1}, {1,0,0,1}}, // 0
-		{{-hw, hh,-hd,1}, {0,1,0,1}}, // 1
-		{{ hw, hh,-hd,1}, {0,0,1,1}}, // 2
-		{{ hw,-hh,-hd,1}, {1,1,0,1}}, // 3
-		{{-hw,-hh, hd,1}, {1,0,1,1}}, // 4
-		{{-hw, hh, hd,1}, {0,1,1,1}}, // 5
-		{{ hw, hh, hd,1}, {1,1,1,1}}, // 6
-		{{ hw,-hh, hd,1}, {0,0,0,1}}, // 7
+		{{-hw,-hh,-hd,1}, color}, // 0
+		{{-hw, hh,-hd,1}, color}, // 1
+		{{ hw, hh,-hd,1}, color}, // 2
+		{{ hw,-hh,-hd,1}, color}, // 3
+		{{-hw,-hh, hd,1}, color}, // 4
+		{{-hw, hh, hd,1}, color}, // 5
+		{{ hw, hh, hd,1}, color}, // 6
+		{{ hw,-hh, hd,1}, color}, // 7
 	};
 
 	std::vector<V> vertices;
@@ -108,8 +109,6 @@ std::vector<GameComponent::Vertex> CreateBox(float w, float h, float d)
 			vertices.push_back(v[b]);
 			vertices.push_back(v[c]);
 		};
-
-	// 12 треугольников (6 граней)
 
 	// front
 	addTri(4, 5, 6);
@@ -140,8 +139,8 @@ std::vector<GameComponent::Vertex> CreateBox(float w, float h, float d)
 
 std::vector<GameComponent::Vertex> CreateSphere(
 	float radius,
-	int sliceCount,   // по горизонтали (longitudes)
-	int stackCount,   // по вертикали (latitudes)
+	int sliceCount, 
+	int stackCount, 
 	DirectX::XMFLOAT4 color
 )
 {
@@ -189,7 +188,7 @@ std::vector<GameComponent::Vertex> CreateSphere(
 
 void Game::CreateOrbitingCube(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed)
 {
-	auto verts = CreateBox(size, size, size);
+	auto verts = CreateBox(size, size, size, color);
 
 	std::vector<std::shared_ptr<GameComponent>> components;
 
@@ -236,57 +235,38 @@ void Game::CreateOrbitingSphere(std::string name, DirectX::XMFLOAT4 color, float
 void Game::CreateObjects()
 {
 	CreateOrbitingSphere("sun", DirectX::XMFLOAT4(1, 1, 0, 1), 1.3f, nullptr, { 3,0,0 }, { 0,1,0 }, XM_PI/8);
-	CreateOrbitingSphere("sphere", DirectX::XMFLOAT4(1, 0, 0, 1), 0.3f, Objects->find("sun")->second, { 6,0,0 }, { 0,1,0 }, XM_PIDIV4);
-	Objects->find("sphere")->second->move({ 1, 0, 0 });
-	CreateOrbitingCube("box", DirectX::XMFLOAT4(1, 0, 0, 1), 0.3f, Objects->find("sphere")->second, { 1,0,0 }, { 0,1,0 }, XM_PIDIV2);
-	//auto verts = CreateBox(0.3f, 0.3f, 0.3f);
+	CreateOrbitingSphere("merc", DirectX::XMFLOAT4(1, 0, 0, 1), 0.1f, Objects->find("sun")->second, { 3,0,0 }, { 0,1,0 }, XM_PI/16);
+	CreateOrbitingSphere("ven", DirectX::XMFLOAT4(1, 0, 0, 1), 0.2f, Objects->find("sun")->second, { 4.5f,0,0 }, { 0,1,0 }, XM_PI/14);
 
-	//std::vector<std::shared_ptr<GameComponent>> components;
+	CreateOrbitingSphere("earth", DirectX::XMFLOAT4(1, 0, 0, 1), 0.3f, Objects->find("sun")->second, { 6,0,0 }, { 0,1,0 }, XM_PI/8);
+	//Objects->find("sphere")->second->move({ 1, 0, 0 });
+	CreateOrbitingCube("moon", DirectX::XMFLOAT4(1, 0, 0, 1), 0.3f, Objects->find("earth")->second, { 1,0,0 }, { 0,1,0 }, XM_PIDIV2);
+	
+}
 
-	//for (size_t i = 0; i < verts.size(); i += 3)
-	//{
-	//	GameComponent::Vertex tri[3] =
-	//	{
-	//		verts[i],
-	//		verts[i + 1],
-	//		verts[i + 2]
-	//	};
-
-	//	components.push_back(std::make_shared<GameComponent>(Device.device, tri));
-	//}
-	//XMFLOAT3 sunPos{ 0,0,0 };
-	//XMFLOAT3 planetOffset{ 3,0,0 }; // радиус 3
-	//XMFLOAT3 rotationAxis{ 0,1,0 }; // вращаем вокруг Y
-	//float speed = XM_PIDIV4;
-	//std::make_shared<OrbitObject> box(components, sunPos, planetOffset, rotationAxis, speed);
-	//box.move({ 0, 0, 0 });
-
-	//Objects->insert({ "box", std::make_shared<OrbitObject>(components, sunPos, planetOffset, rotationAxis, speed)});
-
-	/*verts = CreateSphere(
-		0.2f,                  
-		16,                    
-		16,                    
-		DirectX::XMFLOAT4(1, 0, 0, 1) 
-	);
-
-	components.clear();
-
-	for (size_t i = 0; i < verts.size(); i += 3)
-	{
-		GameComponent::Vertex tri[3] =
+void Game::ChangeMouseModeToFPS()
+{
+	Input->MouseMove.RemoveAll();
+	Input->MouseMove.AddLambda([this](const InputDevice::MouseMoveEventArgs& args)
 		{
-			verts[i],
-			verts[i + 1],
-			verts[i + 2]
-		};
+			float sensitivity = 0.002f;
 
-		components.push_back(std::make_shared<GameComponent>(Device.device, tri));
-	}*/
+			mCam.RotateY(args.Offset.x * sensitivity); // горизонт
+			mCam.Pitch(args.Offset.y * sensitivity);   // вертикаль
+		});
+}
+void Game::ChangeMouseModeToOrbiting()
+{
+	Input->MouseMove.RemoveAll();
+	Input->MouseMove.AddLambda([this](const InputDevice::MouseMoveEventArgs& args)
+		{
+			float sensitivity = -0.002f;
 
-	//GameObject sphere(components);
-
-	//Objects->insert({ "sphere", std::make_shared<GameObject>(components)});
+			mCam.mTheta -= args.Offset.x * sensitivity;
+			mCam.mPhi += args.Offset.y * sensitivity;
+			mCam.mRadius -= args.WheelDelta * 0.001f;
+			mCam.mRadius = std::clamp(mCam.mRadius, 1.0f, 50.0f);
+		});
 }
 
 void Game::Initialize()
@@ -368,13 +348,7 @@ void Game::Initialize()
 
 
 
-	Input->MouseMove.AddLambda([this](const InputDevice::MouseMoveEventArgs& args)
-		{
-			float sensitivity = 0.002f;
-
-			mCam.RotateY(args.Offset.x * sensitivity); // горизонт
-			mCam.Pitch(args.Offset.y * sensitivity);   // вертикаль
-		});
+	ChangeMouseModeToFPS();
 
 
 	D3D11_TEXTURE2D_DESC depthDesc = {};
@@ -419,24 +393,42 @@ void Game::PrepareFrame()
 
 void Game::Update(float deltaTime)
 {
-	if (Input->IsKeyDown(Keys::W))
+	if (orbiting_camera)
 	{
-		mCam.Walk(10.0f * deltaTime);
+		mCam.UpdateOrbit();
 	}
 
-	if (Input->IsKeyDown(Keys::S))
+	if (!orbiting_camera)
 	{
-		mCam.Walk(-10.0f * deltaTime);
-		//std::cout << mCam.GetPosition().z << "\n";
-	}
-	if (Input->IsKeyDown(Keys::A))
-	{
-		mCam.Strafe(-10.0f * deltaTime);
-	}
+		if (Input->IsKeyDown(Keys::W))
+		{
+			mCam.Walk(10.0f * deltaTime);
+		}
 
-	if (Input->IsKeyDown(Keys::D))
+		if (Input->IsKeyDown(Keys::S))
+		{
+			mCam.Walk(-10.0f * deltaTime);
+			//std::cout << mCam.GetPosition().z << "\n";
+		}
+		if (Input->IsKeyDown(Keys::A))
+		{
+			mCam.Strafe(-10.0f * deltaTime);
+		}
+
+		if (Input->IsKeyDown(Keys::D))
+		{
+			mCam.Strafe(10.0f * deltaTime);
+		}
+	}
+	
+
+	if (Input->IsKeyDown(Keys::E))
 	{
-		mCam.Strafe(10.0f * deltaTime);
+		orbiting_camera = !orbiting_camera;
+		if (orbiting_camera)
+			ChangeMouseModeToOrbiting();
+		else
+			ChangeMouseModeToFPS();
 	}
 }
 

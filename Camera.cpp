@@ -1,4 +1,5 @@
 #include "Camera.h"
+#include <algorithm>
 
 void Camera::UpdateViewMatrix()
 {
@@ -41,6 +42,24 @@ void Camera::UpdateViewMatrix()
 	mView(1, 3) = 0.0f;
 	mView(2, 3) = 0.0f;
 	mView(3, 3) = 1.0f;
+}
+
+void Camera::UpdateOrbit()
+{
+	// Ограничиваем угол (чтобы не перевернуться)
+	mPhi = std::clamp(mPhi, 0.1f, DirectX::XM_PI - 0.1f);
+
+	float x = mRadius * sinf(mPhi) * cosf(mTheta);
+	float z = mRadius * sinf(mPhi) * sinf(mTheta);
+	float y = mRadius * cosf(mPhi);
+
+	mPosition = {
+		mTarget.x + x,
+		mTarget.y + y,
+		mTarget.z + z
+	};
+
+	LookAt(mPosition, mTarget, { 0,1,0 });
 }
 
 Camera::Camera()

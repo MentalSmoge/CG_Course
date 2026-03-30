@@ -55,6 +55,8 @@ public:
 	void CreateOrbitingCube(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed);
 	void CreateOrbitingSphere(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed);
 	void CreateObjects();
+	void ChangeMouseModeToFPS();
+	void ChangeMouseModeToOrbiting();
 	virtual void Initialize();
 	virtual void PrepareFrame();
 	//virtual void PrepareResources();

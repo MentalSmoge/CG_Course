@@ -63,4 +63,15 @@ public:
 	// Cache View/Proj matrices.
 	DirectX::XMFLOAT4X4 mView;
 	DirectX::XMFLOAT4X4 mProj;
+
+
+
+
+
+	DirectX::XMFLOAT3 mTarget = { 0,0,0 };
+
+	float mRadius = 5.0f;     // расстояние до цели (zoom)
+	float mTheta = 1.5f;      // горизонтальный угол
+	float mPhi = 1.2f;        // вертикальный угол
+	void UpdateOrbit();
 };
