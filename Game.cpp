@@ -37,18 +37,26 @@ void Game::Draw(float deltaTime)
 
 	float color[] = { (std::sin(TotalTime / 2) + 0.1f) / 4.0f, 0.1f, 0.1f, 1.0f };
 	Device.context->ClearRenderTargetView(Device.rtv, color);
+	Device.context->ClearDepthStencilView(
+		depthStencilView,
+		D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
+		1.0f,
+		0
+	);
 
 	for (auto& [key, value] : *Objects)
 	{
 		value->Update(deltaTime, TotalTime);
 		for (auto& component : value->visual)
 		{
-			XMMATRIX world = XMMatrixTranslation(
+			XMVECTOR q = XMLoadFloat4(&value->rotation);
+			XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(q);
+			XMMATRIX translationMatrix = XMMatrixTranslation(
 				value->position.x,
 				value->position.y,
 				value->position.z
 			);
-
+			XMMATRIX world = rotationMatrix * translationMatrix;
 			cb.world = XMMatrixTranspose(world);
 
 
@@ -57,12 +65,6 @@ void Game::Draw(float deltaTime)
 			component->Draw(Device.context);
 		}
 	}
-	Device.context->ClearDepthStencilView(
-		depthStencilView,
-		D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
-		1.0f,
-		0
-	);
 	/*for(auto& [key, value] : *Objects)
 	{
 		value.Update(deltaTime, TotalTime);

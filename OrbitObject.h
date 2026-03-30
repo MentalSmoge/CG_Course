@@ -4,6 +4,8 @@
 class OrbitObject : public GameObject {
 public:
     std::shared_ptr<GameObject> target = nullptr;
+    float selfSpeed = XM_PIDIV2; // радиан/сек
+    XMVECTOR selfAxis = XMVectorSet(0, 1, 0, 0);
     //DirectX::XMVECTOR center;        // Вокруг чего вращаем
     DirectX::XMVECTOR offset;        // Вектор от центра до объекта (радиус)
     DirectX::XMVECTOR rotationAxis;  // Ось вращения
@@ -23,6 +25,17 @@ public:
 
     void Update(float deltaTime, float totalTime) override {
         if (!target) return;
+        XMVECTOR currentRot = XMLoadFloat4(&rotation);
+
+        // дельта-кватернион
+        XMVECTOR deltaRot = XMQuaternionRotationAxis(selfAxis, selfSpeed * deltaTime);
+
+        // накапливаем
+        currentRot = XMQuaternionMultiply(currentRot, deltaRot);
+        currentRot = XMQuaternionNormalize(currentRot);
+
+        // сохраняем
+        XMStoreFloat4(&rotation, currentRot);
         DirectX::XMVECTOR center = XMLoadFloat3(&target->position);
         // создаём кватернион вращения вокруг axis
         float angle = angularSpeed * totalTime;
