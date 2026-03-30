@@ -161,6 +161,7 @@
     <ClInclude Include="InputDevice.h" />
     <ClInclude Include="Keys.h" />
     <ClInclude Include="MySuper3DApp.h" />
+    <ClInclude Include="OrbitObject.h" />
     <ClInclude Include="PhysicsComponent.h" />
     <ClInclude Include="ShaderProgram.h" />
     <ClInclude Include="TriangleComponent.h" />

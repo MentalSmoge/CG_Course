@@ -42,4 +42,5 @@ DirectXDevice::DirectXDevice(HWND hWnd, int width, int height)
 	ID3D11Texture2D* backTex;
 	res = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backTex);	// __uuidof(ID3D11Texture2D)
 	res = device->CreateRenderTargetView(backTex, nullptr, &rtv);
+
 }

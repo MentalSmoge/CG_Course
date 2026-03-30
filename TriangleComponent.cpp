@@ -43,6 +43,7 @@ TriangleComponent::TriangleComponent(ID3D11Device* device, Vertex points[])
 	cbDesc.CPUAccessFlags = 0;
 
 	//device->CreateBuffer(&cbDesc, nullptr, &constantBuffer);
+
 }
 void TriangleComponent::Update(float deltaTime, float totalTime)
 {

@@ -30,6 +30,7 @@ public:
 	float GetFarWindowHeight()const;
 	// Set frustum.
 	void SetLens(float fovY, float aspect, float zn, float zf);
+	void SetOrthoLens(float width, float height, float zn, float zf);
 	// Define camera space via LookAt parameters.
 	void LookAt(DirectX::FXMVECTOR pos, DirectX::FXMVECTOR target, DirectX::FXMVECTOR worldUp);
 	void LookAt(const DirectX::XMFLOAT3& pos, const DirectX::XMFLOAT3& target,

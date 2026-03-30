@@ -10,6 +10,7 @@
 #include <string>
 #include "GameObject.h"
 #include "Camera.h"
+#include "OrbitObject.h"
 class InputDevice;
 class DisplayWin32;
 class Game
@@ -19,7 +20,6 @@ public:
 	{
 		DirectX::XMMATRIX view;
 		DirectX::XMMATRIX proj;
-		//DirectX::XMMATRIX viewProj;
 		DirectX::XMMATRIX world;
 	};
 	ID3D11Buffer* cameraCB = nullptr;
@@ -52,6 +52,9 @@ public:
 	//virtual void DestroyResources();
 	virtual void Draw(float deltaTime);
 	virtual void EndFrame();
+	void CreateOrbitingCube(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed);
+	void CreateOrbitingSphere(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed);
+	void CreateObjects();
 	virtual void Initialize();
 	virtual void PrepareFrame();
 	//virtual void PrepareResources();
@@ -63,7 +66,7 @@ public:
 	//void RestoreTargets();
 	void Run();
 	Game();
-	std::map<std::string, GameObject>* Objects;
+	std::map<std::string, std::shared_ptr<GameObject>>* Objects;
 	std::map<std::string, int>* Leaderboard;
 	enum GoalResult;
 	GoalResult CheckGoal(GameObject& ball, float leftBound, float rightBound);

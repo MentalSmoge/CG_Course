@@ -156,6 +156,15 @@ void Camera::SetLens(float fovY, float aspect, float zn, float zf)
 	DirectX::XMStoreFloat4x4(&mProj, P);
 }
 
+void Camera::SetOrthoLens(float width, float height, float zn, float zf)
+{
+	mNearZ = zn;
+	mFarZ = zf;
+
+	DirectX::XMMATRIX P = DirectX::XMMatrixOrthographicLH(width, height, zn, zf);
+	DirectX::XMStoreFloat4x4(&mProj, P);
+}
+
 void Camera::LookAt(DirectX::FXMVECTOR pos, DirectX::FXMVECTOR target, DirectX::FXMVECTOR worldUp)
 {
 	DirectX::XMVECTOR L = DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(target, pos));
