@@ -57,8 +57,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT umessage, WPARAM wparam, LPARAM lparam)
 		}
 		else if (raw->header.dwType == RIM_TYPEMOUSE)
 		{
-			//std::cout << game->Input << "SAS " << std::endl;
-			//printf(" Mouse: X=%04d Y:%04d \n", raw->data.mouse.lLastX, raw->data.mouse.lLastY);
 			game->Input->OnMouseMove({
 				raw->data.mouse.usFlags,
 				raw->data.mouse.usButtonFlags,

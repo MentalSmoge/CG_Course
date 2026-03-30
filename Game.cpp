@@ -6,6 +6,8 @@
 ID3D11Texture2D* depthStencilBuffer = nullptr;
 ID3D11DepthStencilView* depthStencilView = nullptr;
 bool orbiting_camera = false;
+bool ortho_camera = false;
+float input_cooldown = 0.0f;
 Game::Game()
 {
 	Initialize();
@@ -67,11 +69,6 @@ void Game::Draw(float deltaTime)
 			component->Draw(Device.context);
 		}
 	}
-	/*for(auto& [key, value] : *Objects)
-	{
-		value.Update(deltaTime, TotalTime);
-		value.Draw(Device.context);
-	}*/
 }
 
 void Game::EndFrame()
@@ -91,14 +88,14 @@ std::vector<GameComponent::Vertex> CreateBox(float w, float h, float d, XMFLOAT4
 
 	V v[8] =
 	{
-		{{-hw,-hh,-hd,1}, color}, // 0
-		{{-hw, hh,-hd,1}, color}, // 1
-		{{ hw, hh,-hd,1}, color}, // 2
-		{{ hw,-hh,-hd,1}, color}, // 3
-		{{-hw,-hh, hd,1}, color}, // 4
-		{{-hw, hh, hd,1}, color}, // 5
-		{{ hw, hh, hd,1}, color}, // 6
-		{{ hw,-hh, hd,1}, color}, // 7
+		{{-hw,-hh,-hd,1}, color},
+		{{-hw, hh,-hd,1}, color},
+		{{ hw, hh,-hd,1}, color},
+		{{ hw,-hh,-hd,1}, color},
+		{{-hw,-hh, hd,1}, color},
+		{{-hw, hh, hd,1}, color},
+		{{ hw, hh, hd,1}, color},
+		{{ hw,-hh, hd,1}, color},
 	};
 
 	std::vector<V> vertices;
@@ -110,27 +107,21 @@ std::vector<GameComponent::Vertex> CreateBox(float w, float h, float d, XMFLOAT4
 			vertices.push_back(v[c]);
 		};
 
-	// front
 	addTri(4, 5, 6);
 	addTri(4, 6, 7);
 
-	// back
 	addTri(0, 2, 1);
 	addTri(0, 3, 2);
 
-	// left
 	addTri(0, 1, 5);
 	addTri(0, 5, 4);
 
-	// right
 	addTri(3, 7, 6);
 	addTri(3, 6, 2);
 
-	// top
 	addTri(1, 2, 6);
 	addTri(1, 6, 5);
 
-	// bottom
 	addTri(0, 4, 7);
 	addTri(0, 7, 3);
 
@@ -147,16 +138,15 @@ std::vector<GameComponent::Vertex> CreateSphere(
 	using V = GameComponent::Vertex;
 	std::vector<V> vertices;
 
-	// вершины сетки
 	std::vector<V> grid;
 
 	for (int i = 0; i <= stackCount; ++i)
 	{
-		float phi = DirectX::XM_PI * i / stackCount; // 0..PI
+		float phi = DirectX::XM_PI * i / stackCount;
 
 		for (int j = 0; j <= sliceCount; ++j)
 		{
-			float theta = 2.0f * DirectX::XM_PI * j / sliceCount; // 0..2PI
+			float theta = 2.0f * DirectX::XM_PI * j / sliceCount;
 
 			float x = radius * sinf(phi) * cosf(theta);
 			float y = radius * cosf(phi);
@@ -186,7 +176,7 @@ std::vector<GameComponent::Vertex> CreateSphere(
 	return vertices;
 }
 
-void Game::CreateOrbitingCube(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed)
+void Game::CreateOrbitingCube(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed, float selfspeed = XM_PIDIV2)
 {
 	auto verts = CreateBox(size, size, size, color);
 
@@ -203,10 +193,10 @@ void Game::CreateOrbitingCube(std::string name, DirectX::XMFLOAT4 color, float s
 
 		components.push_back(std::make_shared<GameComponent>(Device.device, tri));
 	}
-	Objects->insert({ name, std::make_shared<OrbitObject>(components, target, planetOffset, rotationAxis, speed) });
+	Objects->insert({ name, std::make_shared<OrbitObject>(components, target, planetOffset, rotationAxis, speed, selfspeed) });
 }
 
-void Game::CreateOrbitingSphere(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed)
+void Game::CreateOrbitingSphere(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed, float selfspeed = XM_PIDIV2)
 {
 	auto verts = CreateSphere(
 		size,
@@ -228,20 +218,27 @@ void Game::CreateOrbitingSphere(std::string name, DirectX::XMFLOAT4 color, float
 
 		components.push_back(std::make_shared<GameComponent>(Device.device, tri));
 	}
-	Objects->insert({ name, std::make_shared<OrbitObject>(components, target, planetOffset, rotationAxis, speed) });
+	Objects->insert({ name, std::make_shared<OrbitObject>(components, target, planetOffset, rotationAxis, speed, selfspeed) });
 }
 
 
 void Game::CreateObjects()
 {
-	CreateOrbitingSphere("sun", DirectX::XMFLOAT4(1, 1, 0, 1), 1.3f, nullptr, { 3,0,0 }, { 0,1,0 }, XM_PI/8);
-	CreateOrbitingSphere("merc", DirectX::XMFLOAT4(1, 0, 0, 1), 0.1f, Objects->find("sun")->second, { 3,0,0 }, { 0,1,0 }, XM_PI/16);
-	CreateOrbitingSphere("ven", DirectX::XMFLOAT4(1, 0, 0, 1), 0.2f, Objects->find("sun")->second, { 4.5f,0,0 }, { 0,1,0 }, XM_PI/14);
+	CreateOrbitingSphere("sun", DirectX::XMFLOAT4(1, 1, 0, 1), 1.5f, nullptr, { 3,0,0 }, { 0,1,0 }, XM_PI/8);
+	CreateOrbitingSphere("merc", DirectX::XMFLOAT4(0.81f, 0.86f, 0.60f, 1), 0.1f, Objects->find("sun")->second, { 3,0,0 }, { 0,1,0 }, XM_PI/16);
+	CreateOrbitingSphere("ven", DirectX::XMFLOAT4(0.86f, 0.55f, 0.1f, 1), 0.2f, Objects->find("sun")->second, { 4.0f,0,0 }, { 0,1,0 }, XM_PI/14);
 
-	CreateOrbitingSphere("earth", DirectX::XMFLOAT4(1, 0, 0, 1), 0.3f, Objects->find("sun")->second, { 6,0,0 }, { 0,1,0 }, XM_PI/8);
-	//Objects->find("sphere")->second->move({ 1, 0, 0 });
-	CreateOrbitingCube("moon", DirectX::XMFLOAT4(1, 0, 0, 1), 0.3f, Objects->find("earth")->second, { 1,0,0 }, { 0,1,0 }, XM_PIDIV2);
-	
+	CreateOrbitingSphere("earth", DirectX::XMFLOAT4(0.43f, 0.75f, 0.76f, 1), 0.4f, Objects->find("sun")->second, { 6,0,0 }, { 0,1,0 }, XM_PI/18, 4);
+	CreateOrbitingCube("moon", DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 1), 0.2f, Objects->find("earth")->second, { 1,0,0 }, { 0,1,0 }, XM_PIDIV2);
+	CreateOrbitingSphere("mars", DirectX::XMFLOAT4(0.97f, 0.4f, 0.2f, 1), 0.3f, Objects->find("sun")->second, { 8.0f,0,0 }, { 0,1,0 }, XM_PI/6);
+	CreateOrbitingCube("mars_moon", DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 1), 0.15f, Objects->find("mars")->second, { 0.4f,0,0 }, { 0,1,0 }, XM_PIDIV2, 6);
+	CreateOrbitingCube("mars_moon2", DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 1), 0.15f, Objects->find("mars")->second, { 0.6f,0,0 }, { 0,1,0 }, XM_PI/3);
+
+	CreateOrbitingSphere("jupiter", DirectX::XMFLOAT4(0.8f, 0.5f, 0.5f, 1), 0.8f, Objects->find("sun")->second, { 10,0,0 }, { 0,1,0 }, XM_PI/8);
+	CreateOrbitingSphere("saturn", DirectX::XMFLOAT4(0.8f, 0.76f, 0.5f, 1), 0.7f, Objects->find("sun")->second, { 12,0,0 }, { 0,1,0 }, XM_PI/9);
+	CreateOrbitingSphere("uran", DirectX::XMFLOAT4(0.43f, 0.75f, 0.76f, 1), 0.4f, Objects->find("sun")->second, { 14,0,0 }, { 0,1,0 }, XM_PI / 7);
+	CreateOrbitingSphere("neptun", DirectX::XMFLOAT4(0.53f, 0.75f, 0.96f, 1), 0.6f, Objects->find("sun")->second, { 16,0,0 }, { 0,1,0 }, XM_PI / 7.5);
+
 }
 
 void Game::ChangeMouseModeToFPS()
@@ -251,8 +248,8 @@ void Game::ChangeMouseModeToFPS()
 		{
 			float sensitivity = 0.002f;
 
-			mCam.RotateY(args.Offset.x * sensitivity); // горизонт
-			mCam.Pitch(args.Offset.y * sensitivity);   // вертикаль
+			mCam.RotateY(args.Offset.x * sensitivity);
+			mCam.Pitch(args.Offset.y * sensitivity);
 		});
 }
 void Game::ChangeMouseModeToOrbiting()
@@ -269,6 +266,20 @@ void Game::ChangeMouseModeToOrbiting()
 		});
 }
 
+void Game::ChangeCameraModeToOrthographic()
+{
+	mCam.SetOrthoLens(14, 14, 0.1f, 100.0f);
+}
+
+void Game::ChangeCameraModeToPerspective()
+{
+	mCam.SetLens(
+		0.25f * DirectX::XM_PI,
+		(float)Display->ClientWidth / Display->ClientHeight,
+		0.1f,
+		100.0f
+	);
+}
 void Game::Initialize()
 {
 	//1 Create a Window
@@ -278,10 +289,10 @@ void Game::Initialize()
 	Input = new InputDevice(this);
 	Objects = new std::map<std::string, std::shared_ptr<GameObject>>();
 
-	mCam.SetPosition(0.0f, 0.0f, -2.0f);
+	//mCam.SetPosition(0.0f, 0.0f, -82.0f);
 
 	mCam.LookAt(
-		DirectX::XMVectorSet(0, 0, -2, 1),
+		DirectX::XMVectorSet(0, 0, -12, 1),
 		DirectX::XMVectorZero(),
 		DirectX::XMVectorSet(0, 1, 0, 0)
 	);
@@ -346,10 +357,7 @@ void Game::Initialize()
 
 	CreateObjects();
 
-
-
 	ChangeMouseModeToFPS();
-
 
 	D3D11_TEXTURE2D_DESC depthDesc = {};
 	depthDesc.Width = Display->ClientWidth;
@@ -393,6 +401,7 @@ void Game::PrepareFrame()
 
 void Game::Update(float deltaTime)
 {
+	input_cooldown += deltaTime;
 	if (orbiting_camera)
 	{
 		mCam.UpdateOrbit();
@@ -408,7 +417,6 @@ void Game::Update(float deltaTime)
 		if (Input->IsKeyDown(Keys::S))
 		{
 			mCam.Walk(-10.0f * deltaTime);
-			//std::cout << mCam.GetPosition().z << "\n";
 		}
 		if (Input->IsKeyDown(Keys::A))
 		{
@@ -421,15 +429,28 @@ void Game::Update(float deltaTime)
 		}
 	}
 	
-
-	if (Input->IsKeyDown(Keys::E))
+	if (input_cooldown > 1.0f)
 	{
-		orbiting_camera = !orbiting_camera;
-		if (orbiting_camera)
-			ChangeMouseModeToOrbiting();
-		else
-			ChangeMouseModeToFPS();
+		if (Input->IsKeyDown(Keys::E))
+		{
+			input_cooldown = 0;
+			orbiting_camera = !orbiting_camera;
+			if (orbiting_camera)
+				ChangeMouseModeToOrbiting();
+			else
+				ChangeMouseModeToFPS();
+		}
+		if (Input->IsKeyDown(Keys::Q))
+		{
+			input_cooldown = 0;
+			ortho_camera = !ortho_camera;
+			if (ortho_camera)
+				ChangeCameraModeToOrthographic();
+			else
+				ChangeCameraModeToPerspective();
+		}
 	}
+	
 }
 
 

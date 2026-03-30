@@ -52,11 +52,13 @@ public:
 	//virtual void DestroyResources();
 	virtual void Draw(float deltaTime);
 	virtual void EndFrame();
-	void CreateOrbitingCube(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed);
-	void CreateOrbitingSphere(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed);
+	void CreateOrbitingCube(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed, float selfspeed);
+	void CreateOrbitingSphere(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed, float selfspeed);
 	void CreateObjects();
 	void ChangeMouseModeToFPS();
 	void ChangeMouseModeToOrbiting();
+	void ChangeCameraModeToOrthographic();
+	void ChangeCameraModeToPerspective();
 	virtual void Initialize();
 	virtual void PrepareFrame();
 	//virtual void PrepareResources();
