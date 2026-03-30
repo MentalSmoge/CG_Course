@@ -9,6 +9,7 @@ public:
 	{
 		DirectX::XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
 	};
+
 	struct Vertex
 	{
 		DirectX::XMFLOAT4 position;

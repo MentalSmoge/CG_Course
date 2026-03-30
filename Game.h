@@ -19,7 +19,8 @@ public:
 	{
 		DirectX::XMMATRIX view;
 		DirectX::XMMATRIX proj;
-		DirectX::XMMATRIX viewProj;
+		//DirectX::XMMATRIX viewProj;
+		DirectX::XMMATRIX world;
 	};
 	ID3D11Buffer* cameraCB = nullptr;
 	ID3D11Buffer* worldCB = nullptr;

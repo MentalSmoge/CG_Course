@@ -42,11 +42,11 @@ TriangleComponent::TriangleComponent(ID3D11Device* device, Vertex points[])
 	cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	cbDesc.CPUAccessFlags = 0;
 
-	device->CreateBuffer(&cbDesc, nullptr, &constantBuffer);
+	//device->CreateBuffer(&cbDesc, nullptr, &constantBuffer);
 }
 void TriangleComponent::Update(float deltaTime, float totalTime)
 {
-	//transform.position.x += 0.5f * deltaTime; // движение вправо
+
 }
 void TriangleComponent::Draw(ID3D11DeviceContext* context)
 {
@@ -63,8 +63,8 @@ void TriangleComponent::Draw(ID3D11DeviceContext* context)
 		0.0f
 	);
 
-	context->UpdateSubresource(constantBuffer, 0, nullptr, &data, 0, 0);
-	context->VSSetConstantBuffers(0, 1, &constantBuffer);
+	//context->UpdateSubresource(constantBuffer, 0, nullptr, &data, 0, 0);
+	//context->VSSetConstantBuffers(0, 1, &constantBuffer);
 
     context->DrawIndexed(3, 0, 0);
 }

@@ -21,7 +21,8 @@ void Game::Draw(float deltaTime)
 	CameraBuffer cb;
 	cb.view = DirectX::XMMatrixTranspose(mCam.View());
 	cb.proj = DirectX::XMMatrixTranspose(mCam.Proj());
-	cb.viewProj = DirectX::XMMatrixTranspose(mCam.ViewProj());
+	//cb.viewProj = DirectX::XMMatrixTranspose(mCam.ViewProj());
+	//cb.world = XMMatrixTranspose(XMMatrixIdentity());
 
 	Device.context->UpdateSubresource(cameraCB, 0, nullptr, &cb, 0, 0);
 	Device.context->VSSetConstantBuffers(0, 1, &cameraCB);
@@ -36,11 +37,31 @@ void Game::Draw(float deltaTime)
 	float color[] = { (std::sin(TotalTime / 2) + 0.1f) / 4.0f, 0.1f, 0.1f, 1.0f };
 	Device.context->ClearRenderTargetView(Device.rtv, color);
 
-	for(auto& [key, value] : *Objects)
+	for (auto& [key, value] : *Objects)
+	{
+		value.Update(deltaTime, TotalTime);
+		for (auto& component : value.visual)
+		{
+			XMMATRIX world = XMMatrixTranslation(
+				value.position.x,
+				value.position.y,
+				value.position.z
+			);
+
+			cb.world = XMMatrixTranspose(world);
+
+
+			Device.context->UpdateSubresource(cameraCB, 0, nullptr, &cb, 0, 0);
+
+			component->Draw(Device.context);
+		}
+	}
+
+	/*for(auto& [key, value] : *Objects)
 	{
 		value.Update(deltaTime, TotalTime);
 		value.Draw(Device.context);
-	}
+	}*/
 }
 
 void Game::EndFrame()
@@ -48,6 +69,65 @@ void Game::EndFrame()
 	Device.context->OMSetRenderTargets(0, nullptr, nullptr);
 
 	Device.swapChain->Present(1, /*DXGI_PRESENT_DO_NOT_WAIT*/ 0);
+}
+
+std::vector<GameComponent::Vertex> CreateBox(float w, float h, float d)
+{
+	float hw = w * 0.5f;
+	float hh = h * 0.5f;
+	float hd = d * 0.5f;
+
+	using V = GameComponent::Vertex;
+
+	// 8 вершин куба (каждая со своим цветом)
+	V v[8] =
+	{
+		{{-hw,-hh,-hd,1}, {1,0,0,1}}, // 0
+		{{-hw, hh,-hd,1}, {0,1,0,1}}, // 1
+		{{ hw, hh,-hd,1}, {0,0,1,1}}, // 2
+		{{ hw,-hh,-hd,1}, {1,1,0,1}}, // 3
+		{{-hw,-hh, hd,1}, {1,0,1,1}}, // 4
+		{{-hw, hh, hd,1}, {0,1,1,1}}, // 5
+		{{ hw, hh, hd,1}, {1,1,1,1}}, // 6
+		{{ hw,-hh, hd,1}, {0,0,0,1}}, // 7
+	};
+
+	std::vector<V> vertices;
+
+	auto addTri = [&](int a, int b, int c)
+		{
+			vertices.push_back(v[a]);
+			vertices.push_back(v[b]);
+			vertices.push_back(v[c]);
+		};
+
+	// 12 треугольников (6 граней)
+
+	// front
+	addTri(4, 5, 6);
+	addTri(4, 6, 7);
+
+	// back
+	addTri(0, 2, 1);
+	addTri(0, 3, 2);
+
+	// left
+	addTri(0, 1, 5);
+	addTri(0, 5, 4);
+
+	// right
+	addTri(3, 7, 6);
+	addTri(3, 6, 2);
+
+	// top
+	addTri(1, 2, 6);
+	addTri(1, 6, 5);
+
+	// bottom
+	addTri(0, 4, 7);
+	addTri(0, 7, 3);
+
+	return vertices;
 }
 
 void Game::Initialize()
@@ -219,6 +299,36 @@ void Game::Initialize()
 	Objects->insert({ "wall_1", wall_1 });
 	Objects->insert({ "wall_2", wall_2 });
 	#pragma endregion
+
+
+
+	auto verts = CreateBox(0.3f, 0.3f, 0.3f);
+
+	std::vector<std::shared_ptr<GameComponent>> components;
+
+	for (size_t i = 0; i < verts.size(); i += 3)
+	{
+		GameComponent::Vertex tri[3] =
+		{
+			verts[i],
+			verts[i + 1],
+			verts[i + 2]
+		};
+
+		components.push_back(std::make_shared<GameComponent>(Device.device, tri));
+	}
+	GameObject box(components);
+	box.move({ 0, 0, 0 });
+
+	Objects->insert({ "box", box });
+
+	Input->MouseMove.AddLambda([this](const InputDevice::MouseMoveEventArgs& args)
+		{
+			float sensitivity = 0.002f;
+
+			mCam.RotateY(args.Offset.x * sensitivity); // горизонт
+			mCam.Pitch(args.Offset.y * sensitivity);   // вертикаль
+		});
 }
 
 void Game::PrepareFrame()
@@ -256,6 +366,7 @@ void Game::Update(float deltaTime)
 	if (Input->IsKeyDown(Keys::S))
 	{
 		mCam.Walk(-10.0f * deltaTime);
+		std::cout << mCam.GetPosition().z << "\n";
 	}
 	if (Input->IsKeyDown(Keys::A))
 	{
@@ -298,6 +409,9 @@ void Game::Update(float deltaTime)
 	{
 		(*Objects)["player_2"].move({ 0, -speed, 0 });
 	}
+
+
+
 	ClampPlayerY((*Objects)["player_2"], 0.5f, -0.5f, speed);
 
 	if ((*Objects)["ball"].CheckCollision((*Objects)["player_2"]))
