@@ -35,15 +35,6 @@ TriangleComponent::TriangleComponent(ID3D11Device* device, Vertex points[])
 
 	device->CreateBuffer(&indexBufDesc, &indexData, &ib);
 
-
-	D3D11_BUFFER_DESC cbDesc = {};
-	cbDesc.Usage = D3D11_USAGE_DEFAULT;
-	cbDesc.ByteWidth = sizeof(VSConstants);
-	cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	cbDesc.CPUAccessFlags = 0;
-
-	//device->CreateBuffer(&cbDesc, nullptr, &constantBuffer);
-
 }
 void TriangleComponent::Update(float deltaTime, float totalTime)
 {
@@ -55,17 +46,6 @@ void TriangleComponent::Draw(ID3D11DeviceContext* context)
     UINT offset = 0;
 	context->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
     context->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
-
-	VSConstants data = {};
-	data.offset = DirectX::XMFLOAT4(
-		transform.position.x,
-		transform.position.y,
-		transform.position.z,
-		0.0f
-	);
-
-	//context->UpdateSubresource(constantBuffer, 0, nullptr, &data, 0, 0);
-	//context->VSSetConstantBuffers(0, 1, &constantBuffer);
 
     context->DrawIndexed(3, 0, 0);
 }

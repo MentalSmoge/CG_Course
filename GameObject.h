@@ -9,12 +9,12 @@ class GameObject
 public:
 	XMFLOAT3 position{ 0,0,0 };
 	XMFLOAT4 rotation{ 0,0,0,1 };
-	std::vector<std::shared_ptr<GameComponent>> visual;
+	std::shared_ptr<GameComponent> visual;
 	PhysicsComponent physics{};
 	BoundingBox boundingBox{};
 	void move(DirectX::XMFLOAT3 direction);
 	void move_teleport(DirectX::XMFLOAT3 position);
-	GameObject(std::vector<std::shared_ptr<GameComponent>> visuals);
+	GameObject(std::shared_ptr<GameComponent> visuals);
 	GameObject() = default;
 	virtual void Update(float deltaTime, float totalTime);
 	void Draw(ID3D11DeviceContext* context);

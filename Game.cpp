@@ -51,8 +51,7 @@ void Game::Draw(float deltaTime)
 	for (auto& [key, value] : *Objects)
 	{
 		value->Update(deltaTime, TotalTime);
-		for (auto& component : value->visual)
-		{
+		value->visual->Update(deltaTime, TotalTime);
 			XMVECTOR q = XMLoadFloat4(&value->rotation);
 			XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(q);
 			XMMATRIX translationMatrix = XMMatrixTranslation(
@@ -66,8 +65,7 @@ void Game::Draw(float deltaTime)
 
 			Device.context->UpdateSubresource(cameraCB, 0, nullptr, &cb, 0, 0);
 
-			component->Draw(Device.context);
-		}
+			value->visual->Draw(Device.context);
 	}
 }
 
@@ -78,147 +76,133 @@ void Game::EndFrame()
 	Device.swapChain->Present(1, /*DXGI_PRESENT_DO_NOT_WAIT*/ 0);
 }
 
-std::vector<GameComponent::Vertex> CreateBox(float w, float h, float d, XMFLOAT4 color)
+GameComponent::MeshData CreateBox(float width, float height, float depth, DirectX::XMFLOAT4 color)
 {
-	float hw = w * 0.5f;
-	float hh = h * 0.5f;
-	float hd = d * 0.5f;
+	using Vertex = GameComponent::Vertex;
+	GameComponent::MeshData mesh;
 
-	using V = GameComponent::Vertex;
+	float hw = width * 0.5f;
+	float hh = height * 0.5f;
+	float hd = depth * 0.5f;
 
-	V v[8] =
+	// 1. Создаём вершины (каждая грань имеет свои нормали)
+	// Порядок: front, back, top, bottom, left, right
+
+	// FRONT (+Z)
+	mesh.vertices.push_back({ { -hw, -hh,  hd, 1 }, { 0, 0, 1 }, color });
+	mesh.vertices.push_back({ {  hw, -hh,  hd, 1 }, { 0, 0, 1 }, color });
+	mesh.vertices.push_back({ {  hw,  hh,  hd, 1 }, { 0, 0, 1 }, color });
+	mesh.vertices.push_back({ { -hw,  hh,  hd, 1 }, { 0, 0, 1 }, color });
+
+	// BACK (-Z)
+	mesh.vertices.push_back({ {  hw, -hh, -hd, 1 }, { 0, 0, -1 }, color });
+	mesh.vertices.push_back({ { -hw, -hh, -hd, 1 }, { 0, 0, -1 }, color });
+	mesh.vertices.push_back({ { -hw,  hh, -hd, 1 }, { 0, 0, -1 }, color });
+	mesh.vertices.push_back({ {  hw,  hh, -hd, 1 }, { 0, 0, -1 }, color });
+
+	// TOP (+Y)
+	mesh.vertices.push_back({ { -hw,  hh,  hd, 1 }, { 0, 1, 0 }, color });
+	mesh.vertices.push_back({ {  hw,  hh,  hd, 1 }, { 0, 1, 0 }, color });
+	mesh.vertices.push_back({ {  hw,  hh, -hd, 1 }, { 0, 1, 0 }, color });
+	mesh.vertices.push_back({ { -hw,  hh, -hd, 1 }, { 0, 1, 0 }, color });
+
+	// BOTTOM (-Y)
+	mesh.vertices.push_back({ { -hw, -hh, -hd, 1 }, { 0, -1, 0 }, color });
+	mesh.vertices.push_back({ {  hw, -hh, -hd, 1 }, { 0, -1, 0 }, color });
+	mesh.vertices.push_back({ {  hw, -hh,  hd, 1 }, { 0, -1, 0 }, color });
+	mesh.vertices.push_back({ { -hw, -hh,  hd, 1 }, { 0, -1, 0 }, color });
+
+	// LEFT (-X)
+	mesh.vertices.push_back({ { -hw, -hh, -hd, 1 }, { -1, 0, 0 }, color });
+	mesh.vertices.push_back({ { -hw, -hh,  hd, 1 }, { -1, 0, 0 }, color });
+	mesh.vertices.push_back({ { -hw,  hh,  hd, 1 }, { -1, 0, 0 }, color });
+	mesh.vertices.push_back({ { -hw,  hh, -hd, 1 }, { -1, 0, 0 }, color });
+
+	// RIGHT (+X)
+	mesh.vertices.push_back({ {  hw, -hh,  hd, 1 }, { 1, 0, 0 }, color });
+	mesh.vertices.push_back({ {  hw, -hh, -hd, 1 }, { 1, 0, 0 }, color });
+	mesh.vertices.push_back({ {  hw,  hh, -hd, 1 }, { 1, 0, 0 }, color });
+	mesh.vertices.push_back({ {  hw,  hh,  hd, 1 }, { 1, 0, 0 }, color });
+
+	// 2. Индексы для каждой грани (2 треугольника на грань)
+	for (int i = 0; i < 6; ++i)
 	{
-		{{-hw,-hh,-hd,1}, color},
-		{{-hw, hh,-hd,1}, color},
-		{{ hw, hh,-hd,1}, color},
-		{{ hw,-hh,-hd,1}, color},
-		{{-hw,-hh, hd,1}, color},
-		{{-hw, hh, hd,1}, color},
-		{{ hw, hh, hd,1}, color},
-		{{ hw,-hh, hd,1}, color},
-	};
+		uint32_t start = i * 4;
+		mesh.indices.push_back(start + 0);
+		mesh.indices.push_back(start + 1);
+		mesh.indices.push_back(start + 2);
 
-	std::vector<V> vertices;
+		mesh.indices.push_back(start + 0);
+		mesh.indices.push_back(start + 2);
+		mesh.indices.push_back(start + 3);
+	}
 
-	auto addTri = [&](int a, int b, int c)
-		{
-			vertices.push_back(v[a]);
-			vertices.push_back(v[b]);
-			vertices.push_back(v[c]);
-		};
-
-	addTri(4, 5, 6);
-	addTri(4, 6, 7);
-
-	addTri(0, 2, 1);
-	addTri(0, 3, 2);
-
-	addTri(0, 1, 5);
-	addTri(0, 5, 4);
-
-	addTri(3, 7, 6);
-	addTri(3, 6, 2);
-
-	addTri(1, 2, 6);
-	addTri(1, 6, 5);
-
-	addTri(0, 4, 7);
-	addTri(0, 7, 3);
-
-	return vertices;
+	return mesh;
 }
 
-std::vector<GameComponent::Vertex> CreateSphere(
-	float radius,
-	int sliceCount, 
-	int stackCount, 
-	DirectX::XMFLOAT4 color
-)
+GameComponent::MeshData CreateSphere(float radius, int sliceCount, int stackCount, DirectX::XMFLOAT4 color)
 {
-	using V = GameComponent::Vertex;
-	std::vector<V> vertices;
+	using Vertex = GameComponent::Vertex;
+	GameComponent::MeshData mesh;
 
-	std::vector<V> grid;
-
+	// 1. Создаём сетку вершин
 	for (int i = 0; i <= stackCount; ++i)
 	{
-		float phi = DirectX::XM_PI * i / stackCount;
+		float phi = XM_PI * i / stackCount; // от 0 до PI
 
 		for (int j = 0; j <= sliceCount; ++j)
 		{
-			float theta = 2.0f * DirectX::XM_PI * j / sliceCount;
+			float theta = 2.0f * XM_PI * j / sliceCount; // от 0 до 2PI
 
 			float x = radius * sinf(phi) * cosf(theta);
 			float y = radius * cosf(phi);
 			float z = radius * sinf(phi) * sinf(theta);
 
-			grid.push_back({ {x, y, z, 1.0f}, color });
+			XMFLOAT4 pos = { x, y, z, 1 };
+
+			// нормаль для smooth shading
+			//XMVECTOR n = XMVector3Normalize(XMLoadFloat4(&pos));
+			XMVECTOR n = XMVector3Normalize(XMLoadFloat3(reinterpret_cast<XMFLOAT3*>(&pos)));
+			XMFLOAT3 normal;
+			XMStoreFloat3(&normal, n);
+
+			mesh.vertices.push_back({ pos, normal, color });
 		}
 	}
 
+	// 2. Создаём индексный буфер
 	for (int i = 0; i < stackCount; ++i)
 	{
 		for (int j = 0; j < sliceCount; ++j)
 		{
-			int a = i * (sliceCount + 1) + j;
-			int b = a + sliceCount + 1;
+			int first = i * (sliceCount + 1) + j;
+			int second = first + sliceCount + 1;
 
-			vertices.push_back(grid[a]);
-			vertices.push_back(grid[b]);
-			vertices.push_back(grid[a + 1]);
+			mesh.indices.push_back(first);
+			mesh.indices.push_back(second);
+			mesh.indices.push_back(first + 1);
 
-			vertices.push_back(grid[a + 1]);
-			vertices.push_back(grid[b]);
-			vertices.push_back(grid[b + 1]);
+			mesh.indices.push_back(first + 1);
+			mesh.indices.push_back(second);
+			mesh.indices.push_back(second + 1);
 		}
 	}
-
-	return vertices;
+	
+	return mesh;
 }
 
 void Game::CreateOrbitingCube(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed, float selfspeed = XM_PIDIV2)
 {
-	auto verts = CreateBox(size, size, size, color);
-
-	std::vector<std::shared_ptr<GameComponent>> components;
-
-	for (size_t i = 0; i < verts.size(); i += 3)
-	{
-		GameComponent::Vertex tri[3] =
-		{
-			verts[i],
-			verts[i + 1],
-			verts[i + 2]
-		};
-
-		components.push_back(std::make_shared<GameComponent>(Device.device, tri));
-	}
-	Objects->insert({ name, std::make_shared<OrbitObject>(components, target, planetOffset, rotationAxis, speed, selfspeed) });
+	auto boxMesh = CreateBox(size, size, size, color);
+	auto boxComponent = std::make_shared<GameComponent>(Device.device, boxMesh.vertices, boxMesh.indices);
+	Objects->insert({ name, std::make_shared<OrbitObject>(boxComponent, target, planetOffset, rotationAxis, speed, selfspeed) });
 }
 
 void Game::CreateOrbitingSphere(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed, float selfspeed = XM_PIDIV2)
 {
-	auto verts = CreateSphere(
-		size,
-		16,
-		16,
-		color
-	);
-
-	std::vector<std::shared_ptr<GameComponent>> components;
-
-	for (size_t i = 0; i < verts.size(); i += 3)
-	{
-		GameComponent::Vertex tri[3] =
-		{
-			verts[i],
-			verts[i + 1],
-			verts[i + 2]
-		};
-
-		components.push_back(std::make_shared<GameComponent>(Device.device, tri));
-	}
-	Objects->insert({ name, std::make_shared<OrbitObject>(components, target, planetOffset, rotationAxis, speed, selfspeed) });
+	auto sphereMesh = CreateSphere(size, 16, 16, color);
+	auto sphereComponent = std::make_shared<GameComponent>(Device.device, sphereMesh.vertices, sphereMesh.indices);
+	Objects->insert({ name, std::make_shared<OrbitObject>(sphereComponent, target, planetOffset, rotationAxis, speed, selfspeed) });
 }
 
 
@@ -238,7 +222,6 @@ void Game::CreateObjects()
 	CreateOrbitingSphere("saturn", DirectX::XMFLOAT4(0.8f, 0.76f, 0.5f, 1), 0.7f, Objects->find("sun")->second, { 12,0,0 }, { 0,1,0 }, XM_PI/9);
 	CreateOrbitingSphere("uran", DirectX::XMFLOAT4(0.43f, 0.75f, 0.76f, 1), 0.4f, Objects->find("sun")->second, { 14,0,0 }, { 0,1,0 }, XM_PI / 7);
 	CreateOrbitingSphere("neptun", DirectX::XMFLOAT4(0.53f, 0.75f, 0.96f, 1), 0.6f, Objects->find("sun")->second, { 16,0,0 }, { 0,1,0 }, XM_PI / 7.5);
-
 }
 
 void Game::ChangeMouseModeToFPS()
@@ -327,21 +310,16 @@ void Game::Initialize()
 		0,
 		D3D11_INPUT_PER_VERTEX_DATA,
 		0},
-	D3D11_INPUT_ELEMENT_DESC {
-		"COLOR",
-		0,
-		DXGI_FORMAT_R32G32B32A32_FLOAT,
-		0,
-		D3D11_APPEND_ALIGNED_ELEMENT,
-		D3D11_INPUT_PER_VERTEX_DATA,
-		0}
+
+	{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	{ "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
 	D3D_SHADER_MACRO Shader_Macros[] = { "TEST", "1", "TCOLOR", "float4(0.0f, 1.0f, 0.0f, 1.0f)", nullptr, nullptr };
 	shaderProgram = ShaderProgram(
 		Device.device,
 		L"./Shaders/MyVeryFirstShader.hlsl",
 		inputElements,
-		2,
+		3,
 		Shader_Macros
 	);
 	//10.1 Setup Rasterizer Stage 

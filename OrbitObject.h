@@ -10,7 +10,7 @@ public:
     DirectX::XMVECTOR rotationAxis;  
     float angularSpeed;     
 
-    OrbitObject(std::vector<std::shared_ptr<GameComponent>> visuals, 
+    OrbitObject(std::shared_ptr<GameComponent> visuals, 
         std::shared_ptr<GameObject> targetObj, DirectX::XMFLOAT3 offsetVec,
         DirectX::XMFLOAT3 axis, float speed, float selfspeed = XM_PIDIV2)
     {
@@ -39,8 +39,6 @@ public:
         DirectX::XMVECTOR newPos = center + DirectX::XMVector3Rotate(offset, qRotation);
 
         DirectX::XMStoreFloat3(&position, newPos);
-        for (auto& component : visual) {
-            XMStoreFloat3(&component->transform.position, newPos);
-        }
+            XMStoreFloat3(&visual->transform.position, newPos);
     }
 };

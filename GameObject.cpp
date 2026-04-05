@@ -2,11 +2,9 @@
 #include <iostream>
 
 void GameObject::move(DirectX::XMFLOAT3 direction) {
-    for (auto& component : visual) {
-        component->transform.position.x += direction.x;
-        component->transform.position.y += direction.y;
-        component->transform.position.z += direction.z;
-    }
+    visual->transform.position.x += direction.x;
+    visual->transform.position.y += direction.y;
+    visual->transform.position.z += direction.z;
     position.x += direction.x;
     position.y += direction.y;
     position.z += direction.z;
@@ -14,17 +12,15 @@ void GameObject::move(DirectX::XMFLOAT3 direction) {
 
 void GameObject::move_teleport(DirectX::XMFLOAT3 new_position)
 {
-    for (auto& component : visual) {
-        component->transform.position.x = new_position.x;
-        component->transform.position.y = new_position.y;
-        component->transform.position.z = new_position.z;
-    }
+    visual->transform.position.x = new_position.x;
+    visual->transform.position.y = new_position.y;
+    visual->transform.position.z = new_position.z;
     position.x = new_position.x;
     position.y = new_position.y;
     position.z = new_position.z;
 }
 
-GameObject::GameObject(std::vector<std::shared_ptr<GameComponent>> visuals)
+GameObject::GameObject(std::shared_ptr<GameComponent> visuals)
 {
 	visual = visuals;
 }
@@ -33,18 +29,14 @@ void GameObject::Update(float deltaTime, float totalTime)
 {
     move({ physics.velocity.x * deltaTime, physics.velocity.y * deltaTime, 0 });
     UpdateBoundingBox();
-    for (auto& component : visual)
-    {
-        component->Update(deltaTime, totalTime);
-    }
+        visual->Update(deltaTime, totalTime);
+    
 }
 
 void GameObject::Draw(ID3D11DeviceContext* context)
 {
-    for (auto& component : visual)
-    {
-        component->Draw(context);
-    }
+        visual->Draw(context);
+    
 }
 
 void GameObject::UpdateBoundingBox()
