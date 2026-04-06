@@ -6,20 +6,16 @@
 using namespace DirectX;
 
 struct PhysicsComponent {
-    XMFLOAT3 velocity{};
     float mass = 1.0f;
-    XMFLOAT2 size = { 0.0f, 0.0f };
+    XMFLOAT3 size = { 10.0f, 10.0f, 10.0f };
     bool isActive;
 
     PhysicsComponent() :
-        velocity(0, 0, 0),
         isActive(true) {
     }
 
-    PhysicsComponent(XMFLOAT3 initVelocity, XMFLOAT2 initSize) :
-        velocity(initVelocity),
+    PhysicsComponent(XMFLOAT3 initSize) :
         size(initSize),
         isActive(true) {
-        std::cout << size.x << "\n";
     }
 };

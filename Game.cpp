@@ -3,11 +3,13 @@
 #include "DisplayWin32.h"
 #include <iostream>
 #include <algorithm>
+#include "ModelLoader.h"
 ID3D11Texture2D* depthStencilBuffer = nullptr;
 ID3D11DepthStencilView* depthStencilView = nullptr;
-bool orbiting_camera = false;
+bool orbiting_camera = true;
 bool ortho_camera = false;
 float input_cooldown = 0.0f;
+std::vector<std::shared_ptr<GameObject>> ObjectsToCheckForCollision{};
 Game::Game()
 {
 	Initialize();
@@ -49,21 +51,27 @@ void Game::Draw(float deltaTime)
 	for (auto& [key, value] : *Objects)
 	{
 		value->Update(deltaTime, TotalTime);
-		value->visual->Update(deltaTime, TotalTime);
-			XMVECTOR q = XMLoadFloat4(&value->rotation);
-			XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(q);
-			XMMATRIX translationMatrix = XMMatrixTranslation(
-				value->position.x,
-				value->position.y,
-				value->position.z
-			);
-			XMMATRIX world = rotationMatrix * translationMatrix;
-			cb.world = XMMatrixTranspose(world);
 
+		XMMATRIX scaleM = XMMatrixScaling(
+			value->transform.scale.x,
+			value->transform.scale.y,
+			value->transform.scale.z
+		);
+		XMVECTOR q = XMLoadFloat4(&value->transform.rotation);
+		XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(q);
+		XMMATRIX translationMatrix = XMMatrixTranslation(
+			value->transform.position.x,
+			value->transform.position.y,
+			value->transform.position.z
+		);
+		XMMATRIX world = scaleM * rotationMatrix * translationMatrix;
+		cb.world = XMMatrixTranspose(world);
+		XMFLOAT3 modelOffset = value->visual->transform.offset;
+		cb.modelOffset = modelOffset;
 
-			Device.context->UpdateSubresource(cameraCB, 0, nullptr, &cb, 0, 0);
+		Device.context->UpdateSubresource(cameraCB, 0, nullptr, &cb, 0, 0);
 
-			value->visual->Draw(Device.context);
+		value->Draw(Device.context);
 	}
 }
 
@@ -87,40 +95,40 @@ GameComponent::MeshData CreateBox(float width, float height, float depth, Direct
 	// Порядок: front, back, top, bottom, left, right
 
 	// FRONT (+Z)
-	mesh.vertices.push_back({ { -hw, -hh,  hd, 1 }, { 0, 0, 1 }, color });
-	mesh.vertices.push_back({ {  hw, -hh,  hd, 1 }, { 0, 0, 1 }, color });
-	mesh.vertices.push_back({ {  hw,  hh,  hd, 1 }, { 0, 0, 1 }, color });
-	mesh.vertices.push_back({ { -hw,  hh,  hd, 1 }, { 0, 0, 1 }, color });
+	mesh.vertices.push_back({ { -hw, -hh,  hd, 1 }, { 0, 0, 1 }, {1,1}, color });
+	mesh.vertices.push_back({ {  hw, -hh,  hd, 1 }, { 0, 0, 1 }, {1,1}, color });
+	mesh.vertices.push_back({ {  hw,  hh,  hd, 1 }, { 0, 0, 1 }, {1,1}, color });
+	mesh.vertices.push_back({ { -hw,  hh,  hd, 1 }, { 0, 0, 1 }, {1,1}, color });
 
 	// BACK (-Z)
-	mesh.vertices.push_back({ {  hw, -hh, -hd, 1 }, { 0, 0, -1 }, color });
-	mesh.vertices.push_back({ { -hw, -hh, -hd, 1 }, { 0, 0, -1 }, color });
-	mesh.vertices.push_back({ { -hw,  hh, -hd, 1 }, { 0, 0, -1 }, color });
-	mesh.vertices.push_back({ {  hw,  hh, -hd, 1 }, { 0, 0, -1 }, color });
+	mesh.vertices.push_back({ {  hw, -hh, -hd, 1 }, { 0, 0, -1 }, {1,1}, color });
+	mesh.vertices.push_back({ { -hw, -hh, -hd, 1 }, { 0, 0, -1 }, {1,1}, color });
+	mesh.vertices.push_back({ { -hw,  hh, -hd, 1 }, { 0, 0, -1 }, {1,1}, color });
+	mesh.vertices.push_back({ {  hw,  hh, -hd, 1 }, { 0, 0, -1 }, {1,1}, color });
 
 	// TOP (+Y)
-	mesh.vertices.push_back({ { -hw,  hh,  hd, 1 }, { 0, 1, 0 }, color });
-	mesh.vertices.push_back({ {  hw,  hh,  hd, 1 }, { 0, 1, 0 }, color });
-	mesh.vertices.push_back({ {  hw,  hh, -hd, 1 }, { 0, 1, 0 }, color });
-	mesh.vertices.push_back({ { -hw,  hh, -hd, 1 }, { 0, 1, 0 }, color });
+	mesh.vertices.push_back({ { -hw,  hh,  hd, 1 }, { 0, 1, 0 }, {1,1}, color });
+	mesh.vertices.push_back({ {  hw,  hh,  hd, 1 }, { 0, 1, 0 }, {1,1}, color });
+	mesh.vertices.push_back({ {  hw,  hh, -hd, 1 }, { 0, 1, 0 }, {1,1}, color });
+	mesh.vertices.push_back({ { -hw,  hh, -hd, 1 }, { 0, 1, 0 }, {1,1}, color });
 
 	// BOTTOM (-Y)
-	mesh.vertices.push_back({ { -hw, -hh, -hd, 1 }, { 0, -1, 0 }, color });
-	mesh.vertices.push_back({ {  hw, -hh, -hd, 1 }, { 0, -1, 0 }, color });
-	mesh.vertices.push_back({ {  hw, -hh,  hd, 1 }, { 0, -1, 0 }, color });
-	mesh.vertices.push_back({ { -hw, -hh,  hd, 1 }, { 0, -1, 0 }, color });
+	mesh.vertices.push_back({ { -hw, -hh, -hd, 1 }, { 0, -1, 0 }, {1,1}, color });
+	mesh.vertices.push_back({ {  hw, -hh, -hd, 1 }, { 0, -1, 0 }, {1,1}, color });
+	mesh.vertices.push_back({ {  hw, -hh,  hd, 1 }, { 0, -1, 0 }, {1,1}, color });
+	mesh.vertices.push_back({ { -hw, -hh,  hd, 1 }, { 0, -1, 0 }, {1,1}, color });
 
 	// LEFT (-X)
-	mesh.vertices.push_back({ { -hw, -hh, -hd, 1 }, { -1, 0, 0 }, color });
-	mesh.vertices.push_back({ { -hw, -hh,  hd, 1 }, { -1, 0, 0 }, color });
-	mesh.vertices.push_back({ { -hw,  hh,  hd, 1 }, { -1, 0, 0 }, color });
-	mesh.vertices.push_back({ { -hw,  hh, -hd, 1 }, { -1, 0, 0 }, color });
+	mesh.vertices.push_back({ { -hw, -hh, -hd, 1 }, { -1, 0, 0 }, {1,1}, color });
+	mesh.vertices.push_back({ { -hw, -hh,  hd, 1 }, { -1, 0, 0 }, {1,1}, color });
+	mesh.vertices.push_back({ { -hw,  hh,  hd, 1 }, { -1, 0, 0 }, {1,1}, color });
+	mesh.vertices.push_back({ { -hw,  hh, -hd, 1 }, { -1, 0, 0 }, {1,1}, color });
 
 	// RIGHT (+X)
-	mesh.vertices.push_back({ {  hw, -hh,  hd, 1 }, { 1, 0, 0 }, color });
-	mesh.vertices.push_back({ {  hw, -hh, -hd, 1 }, { 1, 0, 0 }, color });
-	mesh.vertices.push_back({ {  hw,  hh, -hd, 1 }, { 1, 0, 0 }, color });
-	mesh.vertices.push_back({ {  hw,  hh,  hd, 1 }, { 1, 0, 0 }, color });
+	mesh.vertices.push_back({ {  hw, -hh,  hd, 1 }, { 1, 0, 0 }, {1,1}, color });
+	mesh.vertices.push_back({ {  hw, -hh, -hd, 1 }, { 1, 0, 0 }, {1,1}, color });
+	mesh.vertices.push_back({ {  hw,  hh, -hd, 1 }, { 1, 0, 0 }, {1,1}, color });
+	mesh.vertices.push_back({ {  hw,  hh,  hd, 1 }, { 1, 0, 0 }, {1,1}, color });
 
 	// 2. Индексы для каждой грани (2 треугольника на грань)
 	for (int i = 0; i < 6; ++i)
@@ -164,7 +172,7 @@ GameComponent::MeshData CreateSphere(float radius, int sliceCount, int stackCoun
 			XMFLOAT3 normal;
 			XMStoreFloat3(&normal, n);
 
-			mesh.vertices.push_back({ pos, normal, color });
+			mesh.vertices.push_back({ pos, normal, {1,1}, color });
 		}
 	}
 
@@ -203,10 +211,29 @@ void Game::CreateOrbitingSphere(std::string name, DirectX::XMFLOAT4 color, float
 	Objects->insert({ name, std::make_shared<OrbitObject>(sphereComponent, target, planetOffset, rotationAxis, speed, selfspeed) });
 }
 
+std::shared_ptr<GameObject> Game::GetGameObject(std::string name)
+{
+	return Objects->find(name)->second;
+}
+
+void Game::CreateModelObject(std::string name, std::string model_path, XMFLOAT3 collision_size)
+{
+	auto mesh = ModelLoader().LoadModel(Device.device, Device.context, model_path);
+
+	auto component = std::make_shared<GameComponent>(
+		Device.device,
+		mesh.vertices,
+		mesh.indices,
+		mesh.texture
+	);
+	auto obj = std::make_shared<GameObject>(component, collision_size);
+	obj->InitBoundingBoxBuffers(Device.device);
+	Objects->insert({ name, obj });
+}
 
 void Game::CreateObjects()
 {
-	CreateOrbitingSphere("sun", DirectX::XMFLOAT4(1, 1, 0, 1), 1.5f, nullptr, { 3,0,0 }, { 0,1,0 }, XM_PI/8);
+	/*CreateOrbitingSphere("sun", DirectX::XMFLOAT4(1, 1, 0, 1), 1.5f, nullptr, { 3,0,0 }, { 0,1,0 }, XM_PI/8);
 	CreateOrbitingSphere("merc", DirectX::XMFLOAT4(0.81f, 0.86f, 0.60f, 1), 0.1f, Objects->find("sun")->second, { 3,0,0 }, { 0,1,0 }, XM_PI/16);
 	CreateOrbitingSphere("ven", DirectX::XMFLOAT4(0.86f, 0.55f, 0.1f, 1), 0.2f, Objects->find("sun")->second, { 4.0f,0,0 }, { 0,1,0 }, XM_PI/14);
 
@@ -219,7 +246,20 @@ void Game::CreateObjects()
 	CreateOrbitingSphere("jupiter", DirectX::XMFLOAT4(0.8f, 0.5f, 0.5f, 1), 0.8f, Objects->find("sun")->second, { 10,0,0 }, { 0,1,0 }, XM_PI/8);
 	CreateOrbitingSphere("saturn", DirectX::XMFLOAT4(0.8f, 0.76f, 0.5f, 1), 0.7f, Objects->find("sun")->second, { 12,0,0 }, { 0,1,0 }, XM_PI/9);
 	CreateOrbitingSphere("uran", DirectX::XMFLOAT4(0.43f, 0.75f, 0.76f, 1), 0.4f, Objects->find("sun")->second, { 14,0,0 }, { 0,1,0 }, XM_PI / 7);
-	CreateOrbitingSphere("neptun", DirectX::XMFLOAT4(0.53f, 0.75f, 0.96f, 1), 0.6f, Objects->find("sun")->second, { 16,0,0 }, { 0,1,0 }, XM_PI / 7.5);
+	CreateOrbitingSphere("neptun", DirectX::XMFLOAT4(0.53f, 0.75f, 0.96f, 1), 0.6f, Objects->find("sun")->second, { 16,0,0 }, { 0,1,0 }, XM_PI / 7.5);*/
+	CreateModelObject("ball", "Models/beach_ball.glb", XMFLOAT3{ 10.5f,10,10.1f });
+	GetGameObject("ball")->SetScale(0.1f);
+	CreateModelObject("toilet", "Models/shrek_toilet.glb", XMFLOAT3 {0.5f,1,0.1f});
+	GetGameObject("toilet")->visual->transform.offset = XMFLOAT3{ -0, -1, -0.5 };
+	GetGameObject("toilet")->SetScale(2.15f);
+	GetGameObject("toilet")->move({ 5.15f, 0, 0 });
+	//GetGameObject("toilet")->move({ 5.15f, 2, 0 });
+	ObjectsToCheckForCollision.push_back(GetGameObject("toilet"));
+	GetGameObject("toilet")->localPosition = GetGameObject("toilet")->transform.position;
+	GetGameObject("toilet")->localRotation = GetGameObject("toilet")->transform.rotation;
+	GetGameObject("toilet")->localScale = GetGameObject("toilet")->transform.scale;
+	GetGameObject("toilet")->parent = GetGameObject("ball");
+
 }
 
 void Game::ChangeMouseModeToFPS()
@@ -243,7 +283,7 @@ void Game::ChangeMouseModeToOrbiting()
 			mCam.mTheta -= args.Offset.x * sensitivity;
 			mCam.mPhi += args.Offset.y * sensitivity;
 			mCam.mRadius -= args.WheelDelta * 0.001f;
-			mCam.mRadius = std::clamp(mCam.mRadius, 1.0f, 50.0f);
+			mCam.mRadius = std::clamp(mCam.mRadius, 10.0f, 50.0f);
 		});
 }
 
@@ -273,7 +313,7 @@ void Game::Initialize()
 	//mCam.SetPosition(0.0f, 0.0f, -82.0f);
 
 	mCam.LookAt(
-		DirectX::XMVectorSet(0, 0, -12, 1),
+		DirectX::XMVectorSet(0, 0, -22, 1),
 		DirectX::XMVectorZero(),
 		DirectX::XMVectorSet(0, 1, 0, 0)
 	);
@@ -310,14 +350,24 @@ void Game::Initialize()
 		0},
 
 	{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	{
+		"TEXCOORD",
+		0,
+		DXGI_FORMAT_R32G32_FLOAT,
+		0,
+		D3D11_APPEND_ALIGNED_ELEMENT,
+		D3D11_INPUT_PER_VERTEX_DATA,
+		0
+	},
 	{ "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	
 	};
 	D3D_SHADER_MACRO Shader_Macros[] = { "TEST", "1", "TCOLOR", "float4(0.0f, 1.0f, 0.0f, 1.0f)", nullptr, nullptr };
 	shaderProgram = ShaderProgram(
 		Device.device,
 		L"./Shaders/MyVeryFirstShader.hlsl",
 		inputElements,
-		3,
+		4,
 		Shader_Macros
 	);
 	//10.1 Setup Rasterizer Stage 
@@ -333,7 +383,8 @@ void Game::Initialize()
 
 	CreateObjects();
 
-	ChangeMouseModeToFPS();
+	ChangeCameraModeToPerspective();
+	ChangeMouseModeToOrbiting();
 
 	D3D11_TEXTURE2D_DESC depthDesc = {};
 	depthDesc.Width = Display->ClientWidth;
@@ -348,6 +399,20 @@ void Game::Initialize()
 
 	Device.device->CreateTexture2D(&depthDesc, nullptr, &depthStencilBuffer);
 	Device.device->CreateDepthStencilView(depthStencilBuffer, nullptr, &depthStencilView);
+
+	ID3D11SamplerState* sampler = nullptr;
+
+	D3D11_SAMPLER_DESC sampDesc = {};
+	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	sampDesc.MinLOD = 0;
+	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	Device.device->CreateSamplerState(&sampDesc, &sampler);
+	Device.context->PSSetSamplers(0, 1, &sampler);
 }
 
 void Game::PrepareFrame()
@@ -378,9 +443,36 @@ void Game::PrepareFrame()
 void Game::Update(float deltaTime)
 {
 	input_cooldown += deltaTime;
+	//GetGameObject("ball")->move({ 1*deltaTime,0,0 });
 	if (orbiting_camera)
 	{
+		mCam.mTarget = GetGameObject("ball")->transform.position;
 		mCam.UpdateOrbit();
+
+		XMFLOAT3 inputDir{ 0,0,0 };
+		XMFLOAT3 velocity{ 0,0,0 };
+		float speed = 5.0f;
+		if (Input->IsKeyDown(Keys::W)) inputDir.z += 1.0f;
+		if (Input->IsKeyDown(Keys::S)) inputDir.z -= 1.0f;
+		if (Input->IsKeyDown(Keys::A)) inputDir.x -= 1.0f;
+		if (Input->IsKeyDown(Keys::D)) inputDir.x += 1.0f;
+		velocity.x = inputDir.x * speed * deltaTime;
+		velocity.z = inputDir.z * speed * deltaTime;
+
+		GetGameObject("ball")->move(velocity);
+		XMFLOAT3 axis{ velocity.z, 0.0f, -velocity.x };
+		float length = sqrtf(axis.x * axis.x + axis.y * axis.y + axis.z * axis.z);
+		if (length > 0)
+		{
+			axis.x /= length;
+			axis.y /= length;
+			axis.z /= length;
+
+			float distance = sqrtf(velocity.x * velocity.x + velocity.z * velocity.z);
+			float angle = distance / 3.0f;
+
+			GetGameObject("ball")->Rotate(axis, angle);
+		}
 	}
 
 	if (!orbiting_camera)
@@ -426,7 +518,12 @@ void Game::Update(float deltaTime)
 				ChangeCameraModeToPerspective();
 		}
 	}
-	
+	for (size_t i = 0; i < ObjectsToCheckForCollision.size(); i++)
+	{
+		if (GetGameObject("ball")->CheckCollision(ObjectsToCheckForCollision[i])) {
+
+		}
+	}
 }
 
 

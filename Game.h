@@ -22,6 +22,7 @@ public:
 		DirectX::XMMATRIX proj;
 		DirectX::XMMATRIX world;
 		float time;
+		XMFLOAT3 modelOffset;
 	};
 	ID3D11Buffer* cameraCB = nullptr;
 	ID3D11Buffer* worldCB = nullptr;
@@ -55,6 +56,8 @@ public:
 	virtual void EndFrame();
 	void CreateOrbitingCube(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed, float selfspeed);
 	void CreateOrbitingSphere(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed, float selfspeed);
+	std::shared_ptr<GameObject> GetGameObject(std::string name);
+	void CreateModelObject(std::string name, std::string model_path, XMFLOAT3 collision_size);
 	void CreateObjects();
 	void ChangeMouseModeToFPS();
 	void ChangeMouseModeToOrbiting();

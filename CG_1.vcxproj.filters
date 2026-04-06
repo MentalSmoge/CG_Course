@@ -48,6 +48,9 @@
     <ClCompile Include="PhysicsComponent.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\MyVeryFirstShader.hlsl">
@@ -94,8 +97,26 @@
     <ClInclude Include="Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ModelLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="OrbitObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Models\beach_ball.glb">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Models\end_table.glb">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Models\shrek_toilet.glb">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

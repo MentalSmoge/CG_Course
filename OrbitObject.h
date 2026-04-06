@@ -24,21 +24,21 @@ public:
 
     void Update(float deltaTime, float totalTime) override {
         if (!target) return;
-        XMVECTOR currentRot = XMLoadFloat4(&rotation);
+        XMVECTOR currentRot = XMLoadFloat4(&transform.rotation);
 
         XMVECTOR deltaRot = XMQuaternionRotationAxis(selfAxis, selfSpeed * deltaTime);
 
         currentRot = XMQuaternionMultiply(currentRot, deltaRot);
         currentRot = XMQuaternionNormalize(currentRot);
 
-        XMStoreFloat4(&rotation, currentRot);
-        DirectX::XMVECTOR center = XMLoadFloat3(&target->position);
+        XMStoreFloat4(&transform.rotation, currentRot);
+        DirectX::XMVECTOR center = XMLoadFloat3(&target->transform.position);
         float angle = angularSpeed * totalTime;
         DirectX::XMVECTOR qRotation = DirectX::XMQuaternionRotationAxis(rotationAxis, angle);
 
         DirectX::XMVECTOR newPos = center + DirectX::XMVector3Rotate(offset, qRotation);
 
-        DirectX::XMStoreFloat3(&position, newPos);
-            XMStoreFloat3(&visual->transform.position, newPos);
+        DirectX::XMStoreFloat3(&transform.position, newPos);
+        XMStoreFloat3(&visual->transform.offset, newPos);
     }
 };

@@ -2,101 +2,94 @@
 #include <iostream>
 
 void GameObject::move(DirectX::XMFLOAT3 direction) {
-    visual->transform.position.x += direction.x;
+    /*visual->transform.position.x += direction.x;
     visual->transform.position.y += direction.y;
-    visual->transform.position.z += direction.z;
-    position.x += direction.x;
-    position.y += direction.y;
-    position.z += direction.z;
+    visual->transform.position.z += direction.z;*/
+    transform.position.x += direction.x;
+    transform.position.y += direction.y;
+    transform.position.z += direction.z;
 }
 
 void GameObject::move_teleport(DirectX::XMFLOAT3 new_position)
 {
-    visual->transform.position.x = new_position.x;
+    /*visual->transform.position.x = new_position.x;
     visual->transform.position.y = new_position.y;
-    visual->transform.position.z = new_position.z;
-    position.x = new_position.x;
-    position.y = new_position.y;
-    position.z = new_position.z;
+    visual->transform.position.z = new_position.z;*/
+    transform.position.x = new_position.x;
+    transform.position.y = new_position.y;
+    transform.position.z = new_position.z;
 }
 
 GameObject::GameObject(std::shared_ptr<GameComponent> visuals)
 {
 	visual = visuals;
 }
+GameObject::GameObject(std::shared_ptr<GameComponent> visuals, XMFLOAT3 size)
+{
+	visual = visuals;
+    physics.size = size;
+}
 
 void GameObject::Update(float deltaTime, float totalTime)
 {
-    move({ physics.velocity.x * deltaTime, physics.velocity.y * deltaTime, 0 });
+    if (parent != nullptr)
+    {
+        XMVECTOR parentPos = XMLoadFloat3(&parent->transform.position);
+        XMVECTOR parentRot = XMLoadFloat4(&parent->transform.rotation);
+
+        XMVECTOR localPos = XMLoadFloat3(&localPosition);
+
+        XMVECTOR worldPos = XMVectorAdd(parentPos, XMVector3Rotate(localPos, parentRot));
+        XMStoreFloat3(&transform.position, worldPos);
+
+        XMVECTOR localRot = XMLoadFloat4(&localRotation);
+        XMVECTOR worldRot = XMQuaternionMultiply(localRot, parentRot);
+        XMStoreFloat4(&transform.rotation, worldRot);
+
+    }
     UpdateBoundingBox();
-        visual->Update(deltaTime, totalTime);
+    visual->Update(deltaTime, totalTime);
     
 }
 
 void GameObject::Draw(ID3D11DeviceContext* context)
 {
-        visual->Draw(context);
-    
+    visual->Draw(context);
+    UpdateBoundingBoxVertices(context);
+    DrawBoundingBox(context);
 }
 
 void GameObject::UpdateBoundingBox()
 {
-    XMFLOAT3 center = position;
+    XMFLOAT3 center = transform.position;
 
     boundingBox.Center = center;
-    boundingBox.Extents = XMFLOAT3(physics.size.x, physics.size.y, 0);
+    boundingBox.Extents = {
+        physics.size.x * transform.scale.x,
+        physics.size.y * transform.scale.y,
+        physics.size.z * transform.scale.z
+    };
 }
 
-bool GameObject::CheckCollision(GameObject& other)
+bool GameObject::CheckCollision(std::shared_ptr<GameObject> other)
 {
-    return boundingBox.Intersects(other.boundingBox);
+    return boundingBox.Intersects(other->boundingBox);
 }
 
 void GameObject::ResolveCollision(GameObject& other, float deltaTime)
 {
-    float ballY = this->position.y;
-    float paddleY = other.position.y;
 
-    float paddleHalfHeight = other.physics.size.y;
-
-    float relativeIntersectY = ballY - paddleY;
-
-    float normalized = relativeIntersectY / paddleHalfHeight;
-
-    float maxBounceAngle = DirectX::XMConvertToRadians(30.0f);
-
-    float bounceAngle = normalized * maxBounceAngle;
-
-    float speed = sqrt(
-        physics.velocity.x * physics.velocity.x +
-        physics.velocity.y * physics.velocity.y
-    );
-    speed = speed * 1.2f;
-
-    float direction = (physics.velocity.x > 0) ? -1.0f : 1.0f;
-
-    physics.velocity.x = direction * speed * cos(bounceAngle);
-    physics.velocity.y = speed * sin(bounceAngle);
 }
 
-void GameObject::HandleWallCollision(float topBound, float bottomBound)
+void GameObject::Rotate(XMFLOAT3 axis, float angle)
 {
-    float ballY = position.y;
-    float halfHeight = physics.size.y;
+    XMVECTOR q = XMLoadFloat4(&transform.rotation);
+    XMVECTOR dq = XMQuaternionRotationAxis(XMLoadFloat3(&axis), angle);
 
-    if (ballY + halfHeight >= topBound)
-    {
-        position.y = topBound - halfHeight;
-
-        physics.velocity.y = -physics.velocity.y;
-    }
-
-    if (ballY - halfHeight <= bottomBound)
-    {
-        position.y = bottomBound + halfHeight;
-
-        physics.velocity.y = -physics.velocity.y;
-    }
-
-    UpdateBoundingBox();
+    q = XMQuaternionMultiply(q, dq);
+    XMStoreFloat4(&transform.rotation, q);
+}
+void GameObject::SetScale(float s)
+{
+    transform.scale = { s, s, s };
 }

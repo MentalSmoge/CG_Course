@@ -46,7 +46,6 @@ void Camera::UpdateViewMatrix()
 
 void Camera::UpdateOrbit()
 {
-	// Ограничиваем угол (чтобы не перевернуться)
 	mPhi = std::clamp(mPhi, 0.1f, DirectX::XM_PI - 0.1f);
 
 	float x = mRadius * sinf(mPhi) * cosf(mTheta);
