@@ -23,8 +23,32 @@ public:
 		DirectX::XMMATRIX world;
 		float time;
 		XMFLOAT3 modelOffset;
+	}; 
+	struct LightBuffer
+	{
+		XMFLOAT3 lightDir;
+		float pad1;
+		XMFLOAT3 lightColor;
+		float pad2;
+	}; 
+	struct MaterialBuffer
+	{
+		XMFLOAT3 ambient;
+		float pad1;
+		XMFLOAT3 diffuse;
+		float pad2;
+		XMFLOAT3 specular;
+		float shininess;
+	};
+	struct CameraPS
+	{
+		XMFLOAT3 cameraPos;
+		float pad;
 	};
 	ID3D11Buffer* cameraCB = nullptr;
+	ID3D11Buffer* lightCB = nullptr;
+	ID3D11Buffer* materialCB = nullptr;
+	ID3D11Buffer* cameraPSCB = nullptr;
 	ID3D11Buffer* worldCB = nullptr;
 	std::vector<std::shared_ptr<GameComponent>> triangles;
 	//backBuffer

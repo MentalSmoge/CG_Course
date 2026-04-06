@@ -72,6 +72,28 @@ void Game::Draw(float deltaTime)
 
 		Device.context->UpdateSubresource(cameraCB, 0, nullptr, &cb, 0, 0);
 
+		LightBuffer lb;
+		lb.lightDir = XMFLOAT3(0.5f, -1.0f, 0.3f);
+		lb.lightColor = XMFLOAT3(1, 1, 1);
+
+		Device.context->UpdateSubresource(lightCB, 0, nullptr, &lb, 0, 0);
+		Device.context->PSSetConstantBuffers(2, 1, &lightCB);
+
+		MaterialBuffer mb;
+		mb.ambient = { 0.1f, 0.1f, 0.1f };
+		mb.diffuse = { 1.0f, 1.0f, 1.0f };
+		mb.specular = { 1.0f, 1.0f, 1.0f };
+		mb.shininess = 32.0f;
+
+		Device.context->UpdateSubresource(materialCB, 0, nullptr, &mb, 0, 0);
+		Device.context->PSSetConstantBuffers(3, 1, &materialCB);
+
+
+		CameraPS cam;
+		cam.cameraPos = mCam.GetPosition();
+		Device.context->UpdateSubresource(cameraPSCB, 0, nullptr, &cam, 0, 0);
+		Device.context->PSSetConstantBuffers(4, 1, &cameraPSCB);
+
 		value->Draw(Device.context);
 	}
 }
@@ -327,6 +349,27 @@ void Game::Initialize()
 
 	Device.device->CreateBuffer(&cbd, nullptr, &cameraCB);
 
+
+	D3D11_BUFFER_DESC lbd = {};
+	lbd.Usage = D3D11_USAGE_DEFAULT;
+	lbd.ByteWidth = sizeof(LightBuffer);
+	lbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+	Device.device->CreateBuffer(&lbd, nullptr, &lightCB);
+
+	D3D11_BUFFER_DESC mbd = {};
+	mbd.Usage = D3D11_USAGE_DEFAULT;
+	mbd.ByteWidth = sizeof(MaterialBuffer);
+	mbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+	Device.device->CreateBuffer(&mbd, nullptr, &materialCB);
+
+	D3D11_BUFFER_DESC cpsbd = {};
+	cpsbd.Usage = D3D11_USAGE_DEFAULT;
+	cpsbd.ByteWidth = sizeof(MaterialBuffer);
+	cpsbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+	Device.device->CreateBuffer(&cpsbd, nullptr, &cameraPSCB);
 
 
 	//2 Create Device with the SwapChain
