@@ -1,3 +1,4 @@
+#pragma shader_model 5_0
 struct VS_IN
 {
     float4 pos : POSITION0;
@@ -16,17 +17,26 @@ cbuffer VSConstants : register(b0)
     matrix view;
     matrix proj;
     matrix world;
+    float time;
 };
 
-PS_IN VSMain(VS_IN input)
+PS_IN VSMain(VS_IN input, uint vertexID : SV_VertexID)
 {
-    PS_IN output = (PS_IN) 0;
+    PS_IN output;
 
-    output.pos = mul(input.pos, world);
-    output.pos = mul(output.pos, view);
-    output.pos = mul(output.pos, proj);
+    float frequency = 2.0;
+    float amplitude = 0.02;
+    float phase = vertexID * 0.1;
+
+    float offset = sin(time * frequency + phase) * amplitude;
+
+    float3 animatedPos = input.pos.xyz + input.normal * offset;
+
+    float4 worldPos = mul(float4(animatedPos, 1.0), world);
+    float4 viewPos = mul(worldPos, view);
+    output.pos = mul(viewPos, proj);
+
     output.col = input.col;
-
     return output;
 }
 

@@ -21,6 +21,7 @@ public:
 		DirectX::XMMATRIX view;
 		DirectX::XMMATRIX proj;
 		DirectX::XMMATRIX world;
+		float time;
 	};
 	ID3D11Buffer* cameraCB = nullptr;
 	ID3D11Buffer* worldCB = nullptr;

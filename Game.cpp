@@ -26,8 +26,7 @@ void Game::Draw(float deltaTime)
 	CameraBuffer cb;
 	cb.view = DirectX::XMMatrixTranspose(mCam.View());
 	cb.proj = DirectX::XMMatrixTranspose(mCam.Proj());
-	//cb.viewProj = DirectX::XMMatrixTranspose(mCam.ViewProj());
-	//cb.world = XMMatrixTranspose(XMMatrixIdentity());
+	cb.time = TotalTime;
 
 	Device.context->UpdateSubresource(cameraCB, 0, nullptr, &cb, 0, 0);
 	Device.context->VSSetConstantBuffers(0, 1, &cameraCB);
@@ -37,7 +36,6 @@ void Game::Draw(float deltaTime)
 
 
 	Device.context->OMSetRenderTargets(1, &Device.rtv, depthStencilView);
-	//Device.context->OMSetRenderTargets(1, &Device.rtv, nullptr);
 
 	float color[] = { (std::sin(TotalTime / 2) + 0.1f) / 4.0f, 0.1f, 0.1f, 1.0f };
 	Device.context->ClearRenderTargetView(Device.rtv, color);
