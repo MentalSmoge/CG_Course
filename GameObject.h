@@ -32,8 +32,7 @@ public:
 
 	void UpdateBoundingBox();
     bool CheckCollision(std::shared_ptr<GameObject> other);
-	//bool CheckCollision(GameObject& other);
-	void ResolveCollision(GameObject& other, float deltaTime);
+    void AttachToParent(std::shared_ptr<GameObject> newParent);
 	void Rotate(XMFLOAT3 axis, float angle);
 	void SetScale(float s);
     ID3D11Buffer* bboxVB = nullptr;
@@ -91,7 +90,7 @@ public:
             };
             v[i].normal = { 0,0,0 };
             v[i].uv = { 0,0 };
-            v[i].color = { 1,0,0,1 }; // красный
+            v[i].color = { 1,0,0,1 };
         }
 
         context->Unmap(bboxVB, 0);

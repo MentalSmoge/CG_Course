@@ -76,7 +76,7 @@ GameComponent::GameComponent(ID3D11Device* device, const std::vector<Vertex>& ve
 
 void GameComponent::Update(float deltaTime, float totalTime)
 {
-    //transform.offset.x += deltaTime;
+
 }
 
 void GameComponent::Draw(ID3D11DeviceContext* context)

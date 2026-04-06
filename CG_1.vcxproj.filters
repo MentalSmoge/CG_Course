@@ -118,5 +118,8 @@
     <None Include="Models\shrek_toilet.glb">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="Models\allosaurus_carnivores.glb">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

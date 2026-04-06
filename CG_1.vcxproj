@@ -172,6 +172,7 @@
     <ClInclude Include="TriangleComponent.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Models\allosaurus_carnivores.glb" />
     <None Include="Models\beach_ball.glb" />
     <None Include="Models\end_table.glb" />
     <None Include="Models\shrek_toilet.glb" />

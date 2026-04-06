@@ -9,6 +9,7 @@ ID3D11DepthStencilView* depthStencilView = nullptr;
 bool orbiting_camera = true;
 bool ortho_camera = false;
 float input_cooldown = 0.0f;
+float grace_period = 0.0f;
 std::vector<std::shared_ptr<GameObject>> ObjectsToCheckForCollision{};
 Game::Game()
 {
@@ -233,33 +234,24 @@ void Game::CreateModelObject(std::string name, std::string model_path, XMFLOAT3 
 
 void Game::CreateObjects()
 {
-	/*CreateOrbitingSphere("sun", DirectX::XMFLOAT4(1, 1, 0, 1), 1.5f, nullptr, { 3,0,0 }, { 0,1,0 }, XM_PI/8);
-	CreateOrbitingSphere("merc", DirectX::XMFLOAT4(0.81f, 0.86f, 0.60f, 1), 0.1f, Objects->find("sun")->second, { 3,0,0 }, { 0,1,0 }, XM_PI/16);
-	CreateOrbitingSphere("ven", DirectX::XMFLOAT4(0.86f, 0.55f, 0.1f, 1), 0.2f, Objects->find("sun")->second, { 4.0f,0,0 }, { 0,1,0 }, XM_PI/14);
-
-	CreateOrbitingSphere("earth", DirectX::XMFLOAT4(0.43f, 0.75f, 0.76f, 1), 0.4f, Objects->find("sun")->second, { 6,0,0 }, { 0,1,0 }, XM_PI/18, 4);
-	CreateOrbitingCube("moon", DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 1), 0.2f, Objects->find("earth")->second, { 1,0,0 }, { 0,1,0 }, XM_PIDIV2);
-	CreateOrbitingSphere("mars", DirectX::XMFLOAT4(0.97f, 0.4f, 0.2f, 1), 0.3f, Objects->find("sun")->second, { 8.0f,0,0 }, { 0,1,0 }, XM_PI/6);
-	CreateOrbitingCube("mars_moon", DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 1), 0.15f, Objects->find("mars")->second, { 0.4f,0,0 }, { 0,1,0 }, XM_PIDIV2, 6);
-	CreateOrbitingCube("mars_moon2", DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 1), 0.15f, Objects->find("mars")->second, { 0.6f,0,0 }, { 0,1,0 }, XM_PI/3);
-
-	CreateOrbitingSphere("jupiter", DirectX::XMFLOAT4(0.8f, 0.5f, 0.5f, 1), 0.8f, Objects->find("sun")->second, { 10,0,0 }, { 0,1,0 }, XM_PI/8);
-	CreateOrbitingSphere("saturn", DirectX::XMFLOAT4(0.8f, 0.76f, 0.5f, 1), 0.7f, Objects->find("sun")->second, { 12,0,0 }, { 0,1,0 }, XM_PI/9);
-	CreateOrbitingSphere("uran", DirectX::XMFLOAT4(0.43f, 0.75f, 0.76f, 1), 0.4f, Objects->find("sun")->second, { 14,0,0 }, { 0,1,0 }, XM_PI / 7);
-	CreateOrbitingSphere("neptun", DirectX::XMFLOAT4(0.53f, 0.75f, 0.96f, 1), 0.6f, Objects->find("sun")->second, { 16,0,0 }, { 0,1,0 }, XM_PI / 7.5);*/
 	CreateModelObject("ball", "Models/beach_ball.glb", XMFLOAT3{ 10.5f,10,10.1f });
 	GetGameObject("ball")->SetScale(0.1f);
-	CreateModelObject("toilet", "Models/shrek_toilet.glb", XMFLOAT3 {0.5f,1,0.1f});
-	GetGameObject("toilet")->visual->transform.offset = XMFLOAT3{ -0, -1, -0.5 };
-	GetGameObject("toilet")->SetScale(2.15f);
-	GetGameObject("toilet")->move({ 5.15f, 0, 0 });
-	//GetGameObject("toilet")->move({ 5.15f, 2, 0 });
-	ObjectsToCheckForCollision.push_back(GetGameObject("toilet"));
-	GetGameObject("toilet")->localPosition = GetGameObject("toilet")->transform.position;
-	GetGameObject("toilet")->localRotation = GetGameObject("toilet")->transform.rotation;
-	GetGameObject("toilet")->localScale = GetGameObject("toilet")->transform.scale;
-	GetGameObject("toilet")->parent = GetGameObject("ball");
 
+	CreateModelObject("toilet", "Models/shrek_toilet.glb", XMFLOAT3 {0.5f,1,0.1f});
+	GetGameObject("toilet")->visual->transform.offset = XMFLOAT3{ -0, -1.5, -1.0 };
+	GetGameObject("toilet")->move({ 5.15f, 0, 0 });
+	GetGameObject("toilet")->SetScale(2.15f);
+	ObjectsToCheckForCollision.push_back(GetGameObject("toilet"));
+
+	CreateModelObject("table", "Models/end_table.glb", XMFLOAT3{ 10.5f,10,10.1f });
+	GetGameObject("table")->move({ -5.15f, 0, 0 });
+	GetGameObject("table")->SetScale(0.04f);
+	ObjectsToCheckForCollision.push_back(GetGameObject("table"));
+
+	CreateModelObject("dino", "Models/allosaurus_carnivores.glb", XMFLOAT3{ 10.5f,10,10.1f });
+	GetGameObject("dino")->move({ -0, 0, 5 });
+	GetGameObject("dino")->SetScale(0.02f);
+	ObjectsToCheckForCollision.push_back(GetGameObject("dino"));
 }
 
 void Game::ChangeMouseModeToFPS()
@@ -443,29 +435,46 @@ void Game::PrepareFrame()
 void Game::Update(float deltaTime)
 {
 	input_cooldown += deltaTime;
-	//GetGameObject("ball")->move({ 1*deltaTime,0,0 });
+	grace_period += deltaTime;
 	if (orbiting_camera)
 	{
 		mCam.mTarget = GetGameObject("ball")->transform.position;
 		mCam.UpdateOrbit();
 
-		XMFLOAT3 inputDir{ 0,0,0 };
-		XMFLOAT3 velocity{ 0,0,0 };
-		float speed = 5.0f;
-		if (Input->IsKeyDown(Keys::W)) inputDir.z += 1.0f;
-		if (Input->IsKeyDown(Keys::S)) inputDir.z -= 1.0f;
-		if (Input->IsKeyDown(Keys::A)) inputDir.x -= 1.0f;
-		if (Input->IsKeyDown(Keys::D)) inputDir.x += 1.0f;
-		velocity.x = inputDir.x * speed * deltaTime;
-		velocity.z = inputDir.z * speed * deltaTime;
+		const float speed = 5.0f;
+
+		XMVECTOR forward = -mCam.GetLookXM();
+		XMVECTOR right = -mCam.GetRightXM();
+
+		forward = XMVectorSetY(forward, 0.0f);
+		right = XMVectorSetY(right, 0.0f);
+
+		forward = XMVector3Normalize(forward);
+		right = XMVector3Normalize(right);
+
+		XMVECTOR move = XMVectorZero();
+
+		if (Input->IsKeyDown(Keys::W)) move += forward;
+		if (Input->IsKeyDown(Keys::S)) move -= forward;
+		if (Input->IsKeyDown(Keys::D)) move += right;
+		if (Input->IsKeyDown(Keys::A)) move -= right;
+
+		if (!XMVector3Equal(move, XMVectorZero()))
+			move = XMVector3Normalize(move);
+
+		move *= -speed * deltaTime;
+
+		XMFLOAT3 velocity;
+		XMStoreFloat3(&velocity, move);
 
 		GetGameObject("ball")->move(velocity);
+
 		XMFLOAT3 axis{ velocity.z, 0.0f, -velocity.x };
-		float length = sqrtf(axis.x * axis.x + axis.y * axis.y + axis.z * axis.z);
-		if (length > 0)
+		float length = sqrtf(axis.x * axis.x + axis.z * axis.z);
+
+		if (length > 0.0f)
 		{
 			axis.x /= length;
-			axis.y /= length;
 			axis.z /= length;
 
 			float distance = sqrtf(velocity.x * velocity.x + velocity.z * velocity.z);
@@ -518,10 +527,19 @@ void Game::Update(float deltaTime)
 				ChangeCameraModeToPerspective();
 		}
 	}
-	for (size_t i = 0; i < ObjectsToCheckForCollision.size(); i++)
+	if (grace_period > 1.0f)
 	{
-		if (GetGameObject("ball")->CheckCollision(ObjectsToCheckForCollision[i])) {
-
+		for (size_t i = 0; i < ObjectsToCheckForCollision.size(); )
+		{
+			if (GetGameObject("ball")->CheckCollision(ObjectsToCheckForCollision[i]))
+			{
+				ObjectsToCheckForCollision[i]->AttachToParent(GetGameObject("ball"));
+				ObjectsToCheckForCollision.erase(ObjectsToCheckForCollision.begin() + i);
+			}
+			else
+			{
+				i++;
+			}
 		}
 	}
 }

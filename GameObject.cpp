@@ -76,9 +76,24 @@ bool GameObject::CheckCollision(std::shared_ptr<GameObject> other)
     return boundingBox.Intersects(other->boundingBox);
 }
 
-void GameObject::ResolveCollision(GameObject& other, float deltaTime)
+void GameObject::AttachToParent(std::shared_ptr<GameObject> newParent)
 {
+    if (!newParent || parent == newParent) return;
 
+    parent = newParent;
+
+    XMVECTOR worldPos = XMLoadFloat3(&transform.position);
+    XMVECTOR parentPos = XMLoadFloat3(&parent->transform.position);
+    XMVECTOR parentRot = XMLoadFloat4(&parent->transform.rotation);
+
+    XMVECTOR offset = XMVectorSubtract(worldPos, parentPos);
+
+    XMVECTOR localPos = XMVector3Rotate(offset, XMQuaternionInverse(parentRot));
+    XMStoreFloat3(&localPosition, localPos);
+
+    XMVECTOR worldRot = XMLoadFloat4(&transform.rotation);
+    XMVECTOR localRot = XMQuaternionMultiply(worldRot, XMQuaternionInverse(parentRot));
+    XMStoreFloat4(&localRotation, localRot);
 }
 
 void GameObject::Rotate(XMFLOAT3 axis, float angle)
