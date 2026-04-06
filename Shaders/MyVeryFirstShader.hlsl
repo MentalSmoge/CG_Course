@@ -24,8 +24,8 @@ PS_IN VSMain(VS_IN input, uint vertexID : SV_VertexID)
 {
     PS_IN output;
 
-    float frequency = 2.0;
-    float amplitude = 0.02;
+    float frequency = 3.0;
+    float amplitude = 0.03;
     float phase = vertexID * 0.1;
 
     float offset = sin(time * frequency + phase) * amplitude;
