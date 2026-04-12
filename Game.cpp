@@ -79,13 +79,7 @@ void Game::Draw(float deltaTime)
 		Device.context->UpdateSubresource(lightCB, 0, nullptr, &lb, 0, 0);
 		Device.context->PSSetConstantBuffers(2, 1, &lightCB);
 
-		MaterialBuffer mb;
-		mb.ambient = { 0.1f, 0.1f, 0.1f };
-		mb.diffuse = { 1.0f, 1.0f, 1.0f };
-		mb.specular = { 1.0f, 1.0f, 1.0f };
-		mb.shininess = 32.0f;
-
-		Device.context->UpdateSubresource(materialCB, 0, nullptr, &mb, 0, 0);
+		Device.context->UpdateSubresource(materialCB, 0, nullptr, &value->mb, 0, 0);
 		Device.context->PSSetConstantBuffers(3, 1, &materialCB);
 
 
@@ -259,9 +253,18 @@ void Game::CreateObjects()
 	CreateModelObject("ball", "Models/beach_ball.glb", XMFLOAT3{ 10.5f,10,10.1f });
 	GetGameObject("ball")->SetScale(0.1f);
 
+	CreateModelObject("ball2", "Models/beach_ball.glb", XMFLOAT3{ 10.5f,10,10.1f });
+	GetGameObject("ball2")->SetScale(0.1f);
+	ObjectsToCheckForCollision.push_back(GetGameObject("ball2"));
+	GetGameObject("ball2")->move({ 7.15f, 0, -2 });
+	GetGameObject("ball2")->mb.shininess = 89.6f;
+	GetGameObject("ball2")->mb.specular = { 0.773911f, 0.773911f, 0.773911f };
+	GetGameObject("ball2")->mb.diffuse = { 0.2775f, 0.2775f, 0.2775f };
+	GetGameObject("ball2")->mb.ambient = { 0.23125f, 0.23125f, 0.23125f };
+
 	CreateModelObject("toilet", "Models/shrek_toilet.glb", XMFLOAT3 {0.5f,1,0.1f});
 	GetGameObject("toilet")->visual->transform.offset = XMFLOAT3{ -0, -1.5, -1.0 };
-	GetGameObject("toilet")->move({ 5.15f, 0, 0 });
+	GetGameObject("toilet")->move({ 5.15f, 2, 0 });
 	GetGameObject("toilet")->SetScale(2.15f);
 	ObjectsToCheckForCollision.push_back(GetGameObject("toilet"));
 
@@ -269,11 +272,34 @@ void Game::CreateObjects()
 	GetGameObject("table")->move({ -5.15f, 0, 0 });
 	GetGameObject("table")->SetScale(0.04f);
 	ObjectsToCheckForCollision.push_back(GetGameObject("table"));
+	GetGameObject("table")->mb.shininess = 27.8974;
+	GetGameObject("table")->mb.specular = { 0.992157f, 0.941176f, 0.807843f };
+	GetGameObject("table")->mb.diffuse = { 0.780392f, 0.568627f, 0.113725f };
+	GetGameObject("table")->mb.ambient = { 0.329412f, 0.223529f, 0.027451f };
+
+	CreateModelObject("table2", "Models/end_table.glb", XMFLOAT3{ 10.5f,10,10.1f });
+	GetGameObject("table2")->move({ -5.15f, 0, 4 });
+	GetGameObject("table2")->SetScale(0.04f);
+	ObjectsToCheckForCollision.push_back(GetGameObject("table2"));
 
 	CreateModelObject("dino", "Models/allosaurus_carnivores.glb", XMFLOAT3{ 10.5f,10,10.1f });
 	GetGameObject("dino")->move({ -0, 0, 5 });
 	GetGameObject("dino")->SetScale(0.02f);
 	ObjectsToCheckForCollision.push_back(GetGameObject("dino"));
+	GetGameObject("dino")->mb.shininess = 32;
+	GetGameObject("dino")->mb.specular = { 0.5f, 0.5f, 0.5f };
+	GetGameObject("dino")->mb.diffuse = { 0.01f, 0.01f, 0.01f };
+	GetGameObject("dino")->mb.ambient = { 0.0f, 0.0f, 0.0f };
+
+	CreateModelObject("dino2", "Models/allosaurus_carnivores.glb", XMFLOAT3{ 10.5f,10,10.1f });
+	GetGameObject("dino2")->move({ -3, 0, 5 });
+	GetGameObject("dino2")->SetScale(0.02f);
+	ObjectsToCheckForCollision.push_back(GetGameObject("dino2"));
+
+	CreateModelObject("floor", "Models/checkered_tile_floor.glb", XMFLOAT3{ 0.5f,0.1f,0.1f });
+	GetGameObject("floor")->move({ -0, -1.5, 0});
+	GetGameObject("floor")->Rotate(XMFLOAT3(1.0f, 0.0f, 0.0f), -XM_PIDIV2);
+	//GetGameObject("floor")->SetScale(0.02f);
 }
 
 void Game::ChangeMouseModeToFPS()
@@ -359,14 +385,14 @@ void Game::Initialize()
 
 	D3D11_BUFFER_DESC mbd = {};
 	mbd.Usage = D3D11_USAGE_DEFAULT;
-	mbd.ByteWidth = sizeof(MaterialBuffer);
+	mbd.ByteWidth = sizeof(GameObject::MaterialBuffer);
 	mbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
 	Device.device->CreateBuffer(&mbd, nullptr, &materialCB);
 
 	D3D11_BUFFER_DESC cpsbd = {};
 	cpsbd.Usage = D3D11_USAGE_DEFAULT;
-	cpsbd.ByteWidth = sizeof(MaterialBuffer);
+	cpsbd.ByteWidth = sizeof(CameraPS);
 	cpsbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
 	Device.device->CreateBuffer(&cpsbd, nullptr, &cameraPSCB);
@@ -439,9 +465,9 @@ void Game::Initialize()
 
 	D3D11_SAMPLER_DESC sampDesc = {};
 	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_MIRROR;
+	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_MIRROR;
+	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_MIRROR;
 	sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 	sampDesc.MinLOD = 0;
 	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
@@ -570,7 +596,7 @@ void Game::Update(float deltaTime)
 				ChangeCameraModeToPerspective();
 		}
 	}
-	if (grace_period > 1.0f)
+	if (grace_period > 2.0f)
 	{
 		for (size_t i = 0; i < ObjectsToCheckForCollision.size(); )
 		{

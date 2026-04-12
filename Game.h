@@ -30,15 +30,6 @@ public:
 		float pad1;
 		XMFLOAT3 lightColor;
 		float pad2;
-	}; 
-	struct MaterialBuffer
-	{
-		XMFLOAT3 ambient;
-		float pad1;
-		XMFLOAT3 diffuse;
-		float pad2;
-		XMFLOAT3 specular;
-		float shininess;
 	};
 	struct CameraPS
 	{

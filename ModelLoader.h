@@ -24,7 +24,6 @@ public:
 
         GameComponent::MeshData result;
 
-        // ВЕРШИНЫ
         for (unsigned int i = 0; i < mesh->mNumVertices; i++)
         {
             GameComponent::Vertex v;
@@ -59,7 +58,6 @@ public:
             result.vertices.push_back(v);
         }
 
-        // ИНДЕКСЫ
         for (unsigned int i = 0; i < mesh->mNumFaces; i++)
         {
             aiFace face = mesh->mFaces[i];
@@ -92,7 +90,6 @@ public:
 
         if (tex->mHeight == 0)
         {
-            // compressed (PNG/JPG)
             CreateWICTextureFromMemory(
                 device,
                 context,
@@ -104,8 +101,7 @@ public:
         }
         else
         {
-            // raw RGBA (реже)
-            // тут нужно руками создавать Texture2D (могу показать если нужно)
+
         }
 
         return srv;

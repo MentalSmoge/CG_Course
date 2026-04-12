@@ -23,11 +23,21 @@ void GameObject::move_teleport(DirectX::XMFLOAT3 new_position)
 GameObject::GameObject(std::shared_ptr<GameComponent> visuals)
 {
 	visual = visuals;
+
+    mb.ambient = { 0.3f, 0.3f, 0.3f };
+    mb.diffuse = { 1.0f, 1.0f, 1.0f };
+    mb.specular = { 1.0f, 1.0f, 1.0f };
+    mb.shininess = 32.0f;
 }
 GameObject::GameObject(std::shared_ptr<GameComponent> visuals, XMFLOAT3 size)
 {
 	visual = visuals;
     physics.size = size;
+
+    mb.ambient = { 0.3f, 0.3f, 0.3f };
+    mb.diffuse = { 1.0f, 1.0f, 1.0f };
+    mb.specular = { 1.0f, 1.0f, 1.0f };
+    mb.shininess = 32.0f;
 }
 
 void GameObject::Update(float deltaTime, float totalTime)

@@ -13,6 +13,16 @@ public:
 		DirectX::XMFLOAT3 scale = { 1,1,1 };
 		DirectX::XMFLOAT4 rotation = { 0,0,0,1 };
 	};
+    struct MaterialBuffer
+    {
+        XMFLOAT3 ambient;
+        float pad1;
+        XMFLOAT3 diffuse;
+        float pad2;
+        XMFLOAT3 specular;
+        float shininess;
+    };
+    MaterialBuffer mb{};
     DirectX::XMFLOAT3 localPosition = { 0,0,0 };
     DirectX::XMFLOAT3 localScale = { 1,1,1 };
     DirectX::XMFLOAT4 localRotation = { 0,0,0,1 };
