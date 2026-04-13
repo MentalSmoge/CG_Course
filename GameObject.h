@@ -34,7 +34,7 @@ public:
 	void move(DirectX::XMFLOAT3 direction);
 	void move_teleport(DirectX::XMFLOAT3 position);
 	GameObject(std::shared_ptr<GameComponent> visuals);
-    GameObject(std::shared_ptr<GameComponent> visuals, XMFLOAT3 size);
+    GameObject(std::shared_ptr<GameComponent> visuals, XMFLOAT3 size, XMFLOAT3 pos);
 	GameObject() = default;
 	virtual void Update(float deltaTime, float totalTime);
 	void Draw(ID3D11DeviceContext* context);

@@ -8,6 +8,7 @@ ID3D11Texture2D* depthStencilBuffer = nullptr;
 ID3D11DepthStencilView* depthStencilView = nullptr;
 bool orbiting_camera = true;
 bool ortho_camera = false;
+bool start_check = false;
 float input_cooldown = 0.0f;
 float grace_period = 0.0f;
 std::vector<std::shared_ptr<GameObject>> ObjectsToCheckForCollision{};
@@ -21,12 +22,11 @@ enum Game::GoalResult
 	Player1Scored,
 	Player2Scored
 };
-XMFLOAT3 ball_default_velocity = XMFLOAT3(0.5f, 0.0f, 0.0f);
 
 void Game::Draw(float deltaTime)
 {
 	mCam.UpdateViewMatrix();
-	CameraBuffer cb;
+	CameraBuffer cb{};
 	cb.view = DirectX::XMMatrixTranspose(mCam.View());
 	cb.proj = DirectX::XMMatrixTranspose(mCam.Proj());
 	cb.time = TotalTime;
@@ -108,46 +108,36 @@ GameComponent::MeshData CreateBox(float width, float height, float depth, Direct
 	float hh = height * 0.5f;
 	float hd = depth * 0.5f;
 
-	// 1. Создаём вершины (каждая грань имеет свои нормали)
-	// Порядок: front, back, top, bottom, left, right
-
-	// FRONT (+Z)
 	mesh.vertices.push_back({ { -hw, -hh,  hd, 1 }, { 0, 0, 1 }, {1,1}, color });
 	mesh.vertices.push_back({ {  hw, -hh,  hd, 1 }, { 0, 0, 1 }, {1,1}, color });
 	mesh.vertices.push_back({ {  hw,  hh,  hd, 1 }, { 0, 0, 1 }, {1,1}, color });
 	mesh.vertices.push_back({ { -hw,  hh,  hd, 1 }, { 0, 0, 1 }, {1,1}, color });
 
-	// BACK (-Z)
 	mesh.vertices.push_back({ {  hw, -hh, -hd, 1 }, { 0, 0, -1 }, {1,1}, color });
 	mesh.vertices.push_back({ { -hw, -hh, -hd, 1 }, { 0, 0, -1 }, {1,1}, color });
 	mesh.vertices.push_back({ { -hw,  hh, -hd, 1 }, { 0, 0, -1 }, {1,1}, color });
 	mesh.vertices.push_back({ {  hw,  hh, -hd, 1 }, { 0, 0, -1 }, {1,1}, color });
 
-	// TOP (+Y)
 	mesh.vertices.push_back({ { -hw,  hh,  hd, 1 }, { 0, 1, 0 }, {1,1}, color });
 	mesh.vertices.push_back({ {  hw,  hh,  hd, 1 }, { 0, 1, 0 }, {1,1}, color });
 	mesh.vertices.push_back({ {  hw,  hh, -hd, 1 }, { 0, 1, 0 }, {1,1}, color });
 	mesh.vertices.push_back({ { -hw,  hh, -hd, 1 }, { 0, 1, 0 }, {1,1}, color });
 
-	// BOTTOM (-Y)
 	mesh.vertices.push_back({ { -hw, -hh, -hd, 1 }, { 0, -1, 0 }, {1,1}, color });
 	mesh.vertices.push_back({ {  hw, -hh, -hd, 1 }, { 0, -1, 0 }, {1,1}, color });
 	mesh.vertices.push_back({ {  hw, -hh,  hd, 1 }, { 0, -1, 0 }, {1,1}, color });
 	mesh.vertices.push_back({ { -hw, -hh,  hd, 1 }, { 0, -1, 0 }, {1,1}, color });
 
-	// LEFT (-X)
 	mesh.vertices.push_back({ { -hw, -hh, -hd, 1 }, { -1, 0, 0 }, {1,1}, color });
 	mesh.vertices.push_back({ { -hw, -hh,  hd, 1 }, { -1, 0, 0 }, {1,1}, color });
 	mesh.vertices.push_back({ { -hw,  hh,  hd, 1 }, { -1, 0, 0 }, {1,1}, color });
 	mesh.vertices.push_back({ { -hw,  hh, -hd, 1 }, { -1, 0, 0 }, {1,1}, color });
 
-	// RIGHT (+X)
 	mesh.vertices.push_back({ {  hw, -hh,  hd, 1 }, { 1, 0, 0 }, {1,1}, color });
 	mesh.vertices.push_back({ {  hw, -hh, -hd, 1 }, { 1, 0, 0 }, {1,1}, color });
 	mesh.vertices.push_back({ {  hw,  hh, -hd, 1 }, { 1, 0, 0 }, {1,1}, color });
 	mesh.vertices.push_back({ {  hw,  hh,  hd, 1 }, { 1, 0, 0 }, {1,1}, color });
 
-	// 2. Индексы для каждой грани (2 треугольника на грань)
 	for (int i = 0; i < 6; ++i)
 	{
 		uint32_t start = i * 4;
@@ -168,14 +158,13 @@ GameComponent::MeshData CreateSphere(float radius, int sliceCount, int stackCoun
 	using Vertex = GameComponent::Vertex;
 	GameComponent::MeshData mesh;
 
-	// 1. Создаём сетку вершин
 	for (int i = 0; i <= stackCount; ++i)
 	{
-		float phi = XM_PI * i / stackCount; // от 0 до PI
+		float phi = XM_PI * i / stackCount;
 
 		for (int j = 0; j <= sliceCount; ++j)
 		{
-			float theta = 2.0f * XM_PI * j / sliceCount; // от 0 до 2PI
+			float theta = 2.0f * XM_PI * j / sliceCount;
 
 			float x = radius * sinf(phi) * cosf(theta);
 			float y = radius * cosf(phi);
@@ -183,8 +172,6 @@ GameComponent::MeshData CreateSphere(float radius, int sliceCount, int stackCoun
 
 			XMFLOAT4 pos = { x, y, z, 1 };
 
-			// нормаль для smooth shading
-			//XMVECTOR n = XMVector3Normalize(XMLoadFloat4(&pos));
 			XMVECTOR n = XMVector3Normalize(XMLoadFloat3(reinterpret_cast<XMFLOAT3*>(&pos)));
 			XMFLOAT3 normal;
 			XMStoreFloat3(&normal, n);
@@ -193,7 +180,6 @@ GameComponent::MeshData CreateSphere(float radius, int sliceCount, int stackCoun
 		}
 	}
 
-	// 2. Создаём индексный буфер
 	for (int i = 0; i < stackCount; ++i)
 	{
 		for (int j = 0; j < sliceCount; ++j)
@@ -233,7 +219,7 @@ std::shared_ptr<GameObject> Game::GetGameObject(std::string name)
 	return Objects->find(name)->second;
 }
 
-void Game::CreateModelObject(std::string name, std::string model_path, XMFLOAT3 collision_size)
+void Game::CreateModelObject(std::string name, std::string model_path, XMFLOAT3 collision_size, XMFLOAT3 pos)
 {
 	auto mesh = ModelLoader().LoadModel(Device.device, Device.context, model_path);
 
@@ -243,33 +229,37 @@ void Game::CreateModelObject(std::string name, std::string model_path, XMFLOAT3 
 		mesh.indices,
 		mesh.texture
 	);
-	auto obj = std::make_shared<GameObject>(component, collision_size);
+	auto obj = std::make_shared<GameObject>(component, collision_size, pos);
 	obj->InitBoundingBoxBuffers(Device.device);
 	Objects->insert({ name, obj });
 }
+void Game::EnablePhysicsCheck()
+{
+	start_check = true;
 
+}
 void Game::CreateObjects()
 {
-	CreateModelObject("ball", "Models/beach_ball.glb", XMFLOAT3{ 10.5f,10,10.1f });
+	CreateModelObject("ball", "Models/beach_ball.glb", XMFLOAT3{ 10.5f,10,10.1f }, {0,0,0});
 	GetGameObject("ball")->SetScale(0.1f);
 
-	CreateModelObject("ball2", "Models/beach_ball.glb", XMFLOAT3{ 10.5f,10,10.1f });
+	CreateModelObject("ball2", "Models/beach_ball.glb", XMFLOAT3{ 10.5f,10,10.1f }, { 7.15f, 0, -2 });
 	GetGameObject("ball2")->SetScale(0.1f);
 	ObjectsToCheckForCollision.push_back(GetGameObject("ball2"));
-	GetGameObject("ball2")->move({ 7.15f, 0, -2 });
+	//GetGameObject("ball2")->move({ 7.15f, 0, -2 });
 	GetGameObject("ball2")->mb.shininess = 89.6f;
 	GetGameObject("ball2")->mb.specular = { 0.773911f, 0.773911f, 0.773911f };
 	GetGameObject("ball2")->mb.diffuse = { 0.2775f, 0.2775f, 0.2775f };
 	GetGameObject("ball2")->mb.ambient = { 0.23125f, 0.23125f, 0.23125f };
 
-	CreateModelObject("toilet", "Models/shrek_toilet.glb", XMFLOAT3 {0.5f,1,0.1f});
+	CreateModelObject("toilet", "Models/shrek_toilet.glb", XMFLOAT3 {0.5f,1,0.1f}, { 5.15f, 2, 0 });
 	GetGameObject("toilet")->visual->transform.offset = XMFLOAT3{ -0, -1.5, -1.0 };
-	GetGameObject("toilet")->move({ 5.15f, 2, 0 });
+	//GetGameObject("toilet")->move({ 5.15f, 2, 0 });
 	GetGameObject("toilet")->SetScale(2.15f);
 	ObjectsToCheckForCollision.push_back(GetGameObject("toilet"));
 
-	CreateModelObject("table", "Models/end_table.glb", XMFLOAT3{ 10.5f,10,10.1f });
-	GetGameObject("table")->move({ -5.15f, 0, 0 });
+	CreateModelObject("table", "Models/end_table.glb", XMFLOAT3{ 10.5f,10,10.1f }, { -5.15f, 0, 0 });
+	//GetGameObject("table")->move({ -5.15f, 0, 0 });
 	GetGameObject("table")->SetScale(0.04f);
 	ObjectsToCheckForCollision.push_back(GetGameObject("table"));
 	GetGameObject("table")->mb.shininess = 27.8974;
@@ -277,13 +267,13 @@ void Game::CreateObjects()
 	GetGameObject("table")->mb.diffuse = { 0.780392f, 0.568627f, 0.113725f };
 	GetGameObject("table")->mb.ambient = { 0.329412f, 0.223529f, 0.027451f };
 
-	CreateModelObject("table2", "Models/end_table.glb", XMFLOAT3{ 10.5f,10,10.1f });
-	GetGameObject("table2")->move({ -5.15f, 0, 4 });
+	CreateModelObject("table2", "Models/end_table.glb", XMFLOAT3{ 10.5f,10,10.1f }, { -5.15f, 0, 4 });
+	//GetGameObject("table2")->move({ -5.15f, 0, 4 });
 	GetGameObject("table2")->SetScale(0.04f);
 	ObjectsToCheckForCollision.push_back(GetGameObject("table2"));
 
-	CreateModelObject("dino", "Models/allosaurus_carnivores.glb", XMFLOAT3{ 10.5f,10,10.1f });
-	GetGameObject("dino")->move({ -0, 0, 5 });
+	CreateModelObject("dino", "Models/allosaurus_carnivores.glb", XMFLOAT3{ 10.5f,10,10.1f }, { -0, 0, 5 });
+	//GetGameObject("dino")->move({ -0, 0, 5 });
 	GetGameObject("dino")->SetScale(0.02f);
 	ObjectsToCheckForCollision.push_back(GetGameObject("dino"));
 	GetGameObject("dino")->mb.shininess = 32;
@@ -291,13 +281,13 @@ void Game::CreateObjects()
 	GetGameObject("dino")->mb.diffuse = { 0.01f, 0.01f, 0.01f };
 	GetGameObject("dino")->mb.ambient = { 0.0f, 0.0f, 0.0f };
 
-	CreateModelObject("dino2", "Models/allosaurus_carnivores.glb", XMFLOAT3{ 10.5f,10,10.1f });
-	GetGameObject("dino2")->move({ -3, 0, 5 });
+	CreateModelObject("dino2", "Models/allosaurus_carnivores.glb", XMFLOAT3{ 10.5f,10,10.1f }, { -3, 0, 5 });
+	//GetGameObject("dino2")->move({ -3, 0, 5 });
 	GetGameObject("dino2")->SetScale(0.02f);
 	ObjectsToCheckForCollision.push_back(GetGameObject("dino2"));
 
-	CreateModelObject("floor", "Models/checkered_tile_floor.glb", XMFLOAT3{ 0.5f,0.1f,0.1f });
-	GetGameObject("floor")->move({ -0, -1.5, 0});
+	CreateModelObject("floor", "Models/checkered_tile_floor.glb", XMFLOAT3{ 0.5f,0.1f,0.1f }, { -0, -1.5, 0 });
+	//GetGameObject("floor")->move({ -0, -1.5, 0});
 	GetGameObject("floor")->Rotate(XMFLOAT3(1.0f, 0.0f, 0.0f), -XM_PIDIV2);
 	//GetGameObject("floor")->SetScale(0.02f);
 }
@@ -529,7 +519,10 @@ void Game::Update(float deltaTime)
 		if (Input->IsKeyDown(Keys::A)) move -= right;
 
 		if (!XMVector3Equal(move, XMVectorZero()))
+		{
 			move = XMVector3Normalize(move);
+			start_check = true;
+		}
 
 		move *= -speed * deltaTime;
 
@@ -596,7 +589,7 @@ void Game::Update(float deltaTime)
 				ChangeCameraModeToPerspective();
 		}
 	}
-	if (grace_period > 2.0f)
+	if (grace_period > 2.0f and start_check)
 	{
 		for (size_t i = 0; i < ObjectsToCheckForCollision.size(); )
 		{

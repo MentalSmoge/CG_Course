@@ -29,11 +29,14 @@ GameObject::GameObject(std::shared_ptr<GameComponent> visuals)
     mb.specular = { 1.0f, 1.0f, 1.0f };
     mb.shininess = 32.0f;
 }
-GameObject::GameObject(std::shared_ptr<GameComponent> visuals, XMFLOAT3 size)
+GameObject::GameObject(std::shared_ptr<GameComponent> visuals, XMFLOAT3 size, XMFLOAT3 pos)
 {
+    transform.position.x = pos.x;
+    transform.position.y = pos.y;
+    transform.position.z = pos.z;
 	visual = visuals;
     physics.size = size;
-
+    UpdateBoundingBox();
     mb.ambient = { 0.3f, 0.3f, 0.3f };
     mb.diffuse = { 1.0f, 1.0f, 1.0f };
     mb.specular = { 1.0f, 1.0f, 1.0f };

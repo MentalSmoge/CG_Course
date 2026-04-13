@@ -70,7 +70,7 @@ public:
 
 	DirectX::XMFLOAT3 mTarget = { 0,0,0 };
 
-	float mRadius = 5.0f;     // расстояние до цели (zoom)
+	float mRadius = 10.0f;     // расстояние до цели (zoom)
 	float mTheta = 1.5f;      // горизонтальный угол
 	float mPhi = 1.2f;        // вертикальный угол
 	void UpdateOrbit();
