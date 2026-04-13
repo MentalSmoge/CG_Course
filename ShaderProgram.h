@@ -5,9 +5,11 @@
 class ShaderProgram
 {
 public:
-	ShaderProgram(
+    ShaderProgram(
         ID3D11Device* device,
         const wchar_t* file,
+        const char* vsEntry,
+        const char* psEntry,
         const D3D11_INPUT_ELEMENT_DESC* layoutDesc,
         UINT layoutCount,
         const D3D_SHADER_MACRO* macros);

@@ -1,8 +1,11 @@
 #include "ShaderProgram.h"
 #include <iostream>
 
-ShaderProgram::ShaderProgram(ID3D11Device* device,
+ShaderProgram::ShaderProgram(
+    ID3D11Device* device,
     const wchar_t* file,
+    const char* vsEntry,
+    const char* psEntry,
     const D3D11_INPUT_ELEMENT_DESC* layoutDesc,
     UINT layoutCount,
     const D3D_SHADER_MACRO* macros)
@@ -10,30 +13,25 @@ ShaderProgram::ShaderProgram(ID3D11Device* device,
     ID3DBlob* vsBlob = nullptr;
     ID3DBlob* psBlob = nullptr;
 
-    if (!CompileShader(file, "VSMain", "vs_5_0", nullptr, &vsBlob))
+    if (!CompileShader(file, vsEntry, "vs_5_0", nullptr, &vsBlob))
         return;
 
-    if (!CompileShader(file, "PSMain", "ps_5_0", macros, &psBlob))
+    if (!CompileShader(file, psEntry, "ps_5_0", macros, &psBlob))
         return;
-    auto res = device->CreateVertexShader(
+
+    device->CreateVertexShader(
         vsBlob->GetBufferPointer(),
         vsBlob->GetBufferSize(),
         nullptr,
         &vertexShader);
 
-    if (FAILED(res))
-        return;
-
-    res = device->CreatePixelShader(
+    device->CreatePixelShader(
         psBlob->GetBufferPointer(),
         psBlob->GetBufferSize(),
         nullptr,
         &pixelShader);
 
-    if (FAILED(res))
-        return;
-
-    res = device->CreateInputLayout(
+    device->CreateInputLayout(
         layoutDesc,
         layoutCount,
         vsBlob->GetBufferPointer(),
@@ -42,10 +40,6 @@ ShaderProgram::ShaderProgram(ID3D11Device* device,
 
     vsBlob->Release();
     psBlob->Release();
-
-    if (FAILED(res))
-        return;
-
 }
 
 bool ShaderProgram::CompileShader(

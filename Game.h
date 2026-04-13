@@ -30,6 +30,7 @@ public:
 		float pad1;
 		XMFLOAT3 lightColor;
 		float pad2;
+		XMMATRIX lightViewProj;
 	};
 	struct CameraPS
 	{
@@ -97,5 +98,6 @@ public:
 private:
 	//void CreateBackBuffer();
 	ID3D11RasterizerState* rastState;
-	ShaderProgram shaderProgram;
+	ShaderProgram shadowShader;
+	ShaderProgram mainShader;
 };

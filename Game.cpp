@@ -6,6 +6,10 @@
 #include "ModelLoader.h"
 ID3D11Texture2D* depthStencilBuffer = nullptr;
 ID3D11DepthStencilView* depthStencilView = nullptr;
+ID3D11Texture2D* shadowTex = nullptr;
+ID3D11DepthStencilView* shadowDSV = nullptr;
+ID3D11ShaderResourceView* shadowSRV = nullptr;
+ID3D11SamplerState* shadowSampler = nullptr;
 bool orbiting_camera = true;
 bool ortho_camera = false;
 float input_cooldown = 0.0f;
@@ -26,29 +30,56 @@ XMFLOAT3 ball_default_velocity = XMFLOAT3(0.5f, 0.0f, 0.0f);
 void Game::Draw(float deltaTime)
 {
 	mCam.UpdateViewMatrix();
+
 	CameraBuffer cb;
-	cb.view = DirectX::XMMatrixTranspose(mCam.View());
-	cb.proj = DirectX::XMMatrixTranspose(mCam.Proj());
+	cb.view = XMMatrixTranspose(mCam.View());
+	cb.proj = XMMatrixTranspose(mCam.Proj());
 	cb.time = TotalTime;
 
 	Device.context->UpdateSubresource(cameraCB, 0, nullptr, &cb, 0, 0);
 	Device.context->VSSetConstantBuffers(0, 1, &cameraCB);
 
+	// === LIGHT ===
 
-
-
-
-	Device.context->OMSetRenderTargets(1, &Device.rtv, depthStencilView);
-
-	float color[] = { (std::sin(TotalTime / 2) + 0.1f) / 4.0f, 0.1f, 0.1f, 1.0f };
-	Device.context->ClearRenderTargetView(Device.rtv, color);
-	Device.context->ClearDepthStencilView(
-		depthStencilView,
-		D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
-		1.0f,
-		0
+	LightBuffer lb;
+	XMMATRIX lightView = XMMatrixLookAtLH(
+		XMVectorSet(-10, 100, -10, 1),
+		XMVectorZero(),
+		XMVectorSet(0, 1, 0, 0)
 	);
 
+	XMMATRIX lightProj = XMMatrixOrthographicLH(50.0f, 50.0f, 0.1f, 100.0f);
+	XMVECTOR lightPos = XMVectorSet(-10, 100, -10, 1);
+	XMVECTOR lightTarget = XMVectorZero();
+	XMVECTOR lightDirVec = XMVector3Normalize(lightTarget - lightPos);
+	XMStoreFloat3(&lb.lightDir, lightDirVec);
+	//lb.lightDir = XMFLOAT3(0.5f, -1.0f, 0.3f);
+	lb.lightColor = XMFLOAT3(1, 1, 1);
+	lb.lightViewProj = XMMatrixTranspose(lightView * lightProj);
+
+	Device.context->UpdateSubresource(lightCB, 0, nullptr, &lb, 0, 0);
+	Device.context->PSSetConstantBuffers(2, 1, &lightCB);
+
+	// =========================================================
+	// ===================== 1. SHADOW PASS =====================
+	// =========================================================
+
+	// viewport под shadow map
+	D3D11_VIEWPORT shadowVP = {};
+	shadowVP.Width = 2048.0f;
+	shadowVP.Height = 2048.0f;
+	shadowVP.MinDepth = 0.0f;
+	shadowVP.MaxDepth = 1.0f;
+	Device.context->RSSetViewports(1, &shadowVP);
+
+	// только depth
+	Device.context->OMSetRenderTargets(0, nullptr, shadowDSV);
+	Device.context->ClearDepthStencilView(shadowDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	Device.context->VSSetShader(shadowShader.vertexShader, nullptr, 0);
+	Device.context->PSSetShader(nullptr, nullptr, 0);
+	Device.context->IASetInputLayout(shadowShader.inputLayout);
+
+	Device.context->VSSetConstantBuffers(2, 1, &lightCB);   // <-- ВАЖНО!
 	for (auto& [key, value] : *Objects)
 	{
 		value->Update(deltaTime, TotalTime);
@@ -58,33 +89,96 @@ void Game::Draw(float deltaTime)
 			value->transform.scale.y,
 			value->transform.scale.z
 		);
+
 		XMVECTOR q = XMLoadFloat4(&value->transform.rotation);
 		XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(q);
+
 		XMMATRIX translationMatrix = XMMatrixTranslation(
 			value->transform.position.x,
 			value->transform.position.y,
 			value->transform.position.z
 		);
+
 		XMMATRIX world = scaleM * rotationMatrix * translationMatrix;
+
 		cb.world = XMMatrixTranspose(world);
-		XMFLOAT3 modelOffset = value->visual->transform.offset;
-		cb.modelOffset = modelOffset;
+		cb.modelOffset = value->visual->transform.offset;
 
 		Device.context->UpdateSubresource(cameraCB, 0, nullptr, &cb, 0, 0);
 
-		LightBuffer lb;
-		lb.lightDir = XMFLOAT3(0.5f, -1.0f, 0.3f);
-		lb.lightColor = XMFLOAT3(1, 1, 1);
+		value->Draw(Device.context);
+	}
 
-		Device.context->UpdateSubresource(lightCB, 0, nullptr, &lb, 0, 0);
-		Device.context->PSSetConstantBuffers(2, 1, &lightCB);
+	// =========================================================
+	// ===================== 2. MAIN PASS =======================
+	// =========================================================
 
+	// viewport экрана
+	D3D11_VIEWPORT viewport = {};
+	viewport.Width = (float)Display->ClientWidth;
+	viewport.Height = (float)Display->ClientHeight;
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
+	Device.context->RSSetViewports(1, &viewport);
+
+	// возвращаем backbuffer
+	Device.context->OMSetRenderTargets(1, &Device.rtv, depthStencilView);
+
+	float color[] = {
+		(std::sin(TotalTime / 2) + 0.1f) / 4.0f,
+		0.1f,
+		0.1f,
+		1.0f
+	};
+
+	Device.context->ClearRenderTargetView(Device.rtv, color);
+	Device.context->ClearDepthStencilView(
+		depthStencilView,
+		D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
+		1.0f,
+		0
+	);
+
+	Device.context->VSSetShader(mainShader.vertexShader, nullptr, 0);
+	Device.context->PSSetShader(mainShader.pixelShader, nullptr, 0);
+	Device.context->IASetInputLayout(mainShader.inputLayout);
+
+	// передаём shadow map
+	Device.context->PSSetShaderResources(1, 1, &shadowSRV);
+	Device.context->PSSetSamplers(1, 1, &shadowSampler);
+	Device.context->VSSetConstantBuffers(2, 1, &lightCB);
+	for (auto& [key, value] : *Objects)
+	{
+		XMMATRIX scaleM = XMMatrixScaling(
+			value->transform.scale.x,
+			value->transform.scale.y,
+			value->transform.scale.z
+		);
+
+		XMVECTOR q = XMLoadFloat4(&value->transform.rotation);
+		XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(q);
+
+		XMMATRIX translationMatrix = XMMatrixTranslation(
+			value->transform.position.x,
+			value->transform.position.y,
+			value->transform.position.z
+		);
+
+		XMMATRIX world = scaleM * rotationMatrix * translationMatrix;
+
+		cb.world = XMMatrixTranspose(world);
+		cb.modelOffset = value->visual->transform.offset;
+
+		Device.context->UpdateSubresource(cameraCB, 0, nullptr, &cb, 0, 0);
+
+		// материал
 		Device.context->UpdateSubresource(materialCB, 0, nullptr, &value->mb, 0, 0);
 		Device.context->PSSetConstantBuffers(3, 1, &materialCB);
 
-
+		// камера
 		CameraPS cam;
 		cam.cameraPos = mCam.GetPosition();
+
 		Device.context->UpdateSubresource(cameraPSCB, 0, nullptr, &cam, 0, 0);
 		Device.context->PSSetConstantBuffers(4, 1, &cameraPSCB);
 
@@ -424,9 +518,21 @@ void Game::Initialize()
 	
 	};
 	D3D_SHADER_MACRO Shader_Macros[] = { "TEST", "1", "TCOLOR", "float4(0.0f, 1.0f, 0.0f, 1.0f)", nullptr, nullptr };
-	shaderProgram = ShaderProgram(
+	shadowShader = ShaderProgram(
 		Device.device,
 		L"./Shaders/MyVeryFirstShader.hlsl",
+		"VSShadow",
+		"PSShadow",
+		inputElements,
+		4,
+		nullptr
+	);
+
+	mainShader = ShaderProgram(
+		Device.device,
+		L"./Shaders/MyVeryFirstShader.hlsl",
+		"VSMain",
+		"PSMain",
 		inputElements,
 		4,
 		Shader_Macros
@@ -474,6 +580,48 @@ void Game::Initialize()
 
 	Device.device->CreateSamplerState(&sampDesc, &sampler);
 	Device.context->PSSetSamplers(0, 1, &sampler);
+
+
+	D3D11_SAMPLER_DESC samp = {};
+	samp.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	samp.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+	samp.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+	samp.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+	samp.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+	samp.BorderColor[0] = 1.0f;  // белый = отсутствие тени за границей
+	samp.BorderColor[1] = 1.0f;
+	samp.BorderColor[2] = 1.0f;
+	samp.BorderColor[3] = 1.0f;
+
+	Device.device->CreateSamplerState(&samp, &shadowSampler);
+
+
+	D3D11_TEXTURE2D_DESC desc = {};
+	desc.Width = 2048;
+	desc.Height = 2048;
+	desc.MipLevels = 1;
+	desc.ArraySize = 1;
+	desc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+	desc.SampleDesc.Count = 1;
+	desc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+
+	Device.device->CreateTexture2D(&desc, nullptr, &shadowTex);
+
+	// DSV
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+
+	Device.device->CreateDepthStencilView(shadowTex, &dsvDesc, &shadowDSV);
+
+	// SRV
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+
+	Device.device->CreateShaderResourceView(shadowTex, &srvDesc, &shadowSRV);
+	Device.context->PSSetShaderResources(1, 1, &shadowSRV);
 }
 
 void Game::PrepareFrame()
@@ -494,11 +642,11 @@ void Game::PrepareFrame()
 	Device.context->RSSetViewports(1, &viewport);
 
 	//8 Setup the IA stage
-	Device.context->IASetInputLayout(shaderProgram.inputLayout);
+	Device.context->IASetInputLayout(mainShader.inputLayout);
 	Device.context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	//9 Set vertex and pixel shaders
-	Device.context->VSSetShader(shaderProgram.vertexShader, nullptr, 0);
-	Device.context->PSSetShader(shaderProgram.pixelShader, nullptr, 0);
+	Device.context->VSSetShader(mainShader.vertexShader, nullptr, 0);
+	Device.context->PSSetShader(mainShader.pixelShader, nullptr, 0);
 }
 
 void Game::Update(float deltaTime)
