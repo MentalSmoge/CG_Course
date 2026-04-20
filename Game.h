@@ -11,8 +11,10 @@
 #include "GameObject.h"
 #include "Camera.h"
 #include "OrbitObject.h"
+
 class InputDevice;
 class DisplayWin32;
+
 class Game
 {
 public:
@@ -21,9 +23,11 @@ public:
 		DirectX::XMMATRIX view;
 		DirectX::XMMATRIX proj;
 		DirectX::XMMATRIX world;
+		DirectX::XMMATRIX normalMatrix;
 		float time;
 		XMFLOAT3 modelOffset;
-	}; 
+	};
+
 	struct LightBuffer
 	{
 		XMFLOAT3 lightDir;
@@ -31,42 +35,36 @@ public:
 		XMFLOAT3 lightColor;
 		float pad2;
 	};
+
 	struct CameraPS
 	{
 		XMFLOAT3 cameraPos;
 		float pad;
 	};
+
+	// Новый буфер для матрицы преобразования в пространство источника света
+	struct ShadowBuffer
+	{
+		DirectX::XMMATRIX lightViewProj;
+	};
+
 	ID3D11Buffer* cameraCB = nullptr;
 	ID3D11Buffer* lightCB = nullptr;
 	ID3D11Buffer* materialCB = nullptr;
 	ID3D11Buffer* cameraPSCB = nullptr;
 	ID3D11Buffer* worldCB = nullptr;
-	std::vector<std::shared_ptr<GameComponent>> triangles;
-	//backBuffer
-	
-	//Device
-	//Context
-	//SwapChain
-	//RenderView
-	DirectXDevice Device;
+	ID3D11Buffer* shadowCB = nullptr;   // константный буфер для матрицы света
 
-	//DebugAnnotation
-	//Instance
-	//Name
-	//RenderSRV
-	//ScreenResized
-	
-	//StartTime
-	//PrevTime
+	std::vector<std::shared_ptr<GameComponent>> triangles;
+	DirectXDevice Device;
 	std::chrono::steady_clock::time_point PrevTime;
-	//TotalTime
 	float TotalTime = 0;
 	float TotalTimeForFPS = 0;
 	unsigned int FrameCount = 0;
 
 	DisplayWin32* Display;
 	InputDevice* Input;
-	//virtual void DestroyResources();
+
 	virtual void Draw(float deltaTime);
 	virtual void EndFrame();
 	void CreateOrbitingCube(std::string name, DirectX::XMFLOAT4 color, float size, std::shared_ptr<GameObject> target, XMFLOAT3 planetOffset, XMFLOAT3 rotationAxis, float speed, float selfspeed);
@@ -81,22 +79,39 @@ public:
 	void ChangeCameraModeToPerspective();
 	virtual void Initialize();
 	virtual void PrepareFrame();
-	//virtual void PrepareResources();
 	virtual void Update(float deltaTime);
 	void ClampPlayerY(GameObject& player, float topBound, float bottomBound, float speed);
-	//virtual void UpdateInternal();
-	//void Exit();
-	//void MessageHandler();
-	//void RestoreTargets();
 	void Run();
+
 	Game();
 	std::map<std::string, std::shared_ptr<GameObject>>* Objects;
 	std::map<std::string, int>* Leaderboard;
 	enum GoalResult;
 	GoalResult CheckGoal(GameObject& ball, float leftBound, float rightBound);
 	Camera mCam{};
+
 private:
-	//void CreateBackBuffer();
+	// Ресурсы карты теней
+	ID3D11Texture2D* shadowMapTex = nullptr;
+	ID3D11DepthStencilView* shadowMapDSV = nullptr;
+	ID3D11ShaderResourceView* shadowMapSRV = nullptr;
+	ID3D11SamplerState* shadowSampler = nullptr;
+	ID3D11Buffer* shadowWorldCB = nullptr;
+	// Размер карты теней
+	static constexpr UINT SHADOW_MAP_SIZE = 2048*4;
+
+	// Шейдер для рендеринга глубины (теней)
+	ShaderProgram shadowShaderProgram;
+
+	// Настройки источника света (солнце)
+	XMFLOAT3 lightDirection = XMFLOAT3(0.7f, -1.0f, 0.7f);
+	float    lightDistance = 200.0f;   // расстояние от центра сцены до источника
+	float    lightOrthoSize = 200.0f;   // размер ортогональной проекции
+
+	// Метод рендеринга карты теней
+	void RenderShadowMap();
+
 	ID3D11RasterizerState* rastState;
 	ShaderProgram shaderProgram;
+	XMMATRIX currentLightViewProj;  // Сохраняем матрицу для использования в Draw
 };
