@@ -757,6 +757,42 @@ void Game::Update(float deltaTime)
 			}
 		}
 	}
+
+
+	static float shootCooldown = 0.0f;
+	if (shootCooldown > 0.0f)
+		shootCooldown -= deltaTime;
+
+	if (Input->IsKeyDown(Keys::F) && shootCooldown <= 0.0f)
+	{
+		auto playerBall = GetGameObject("ball");
+		if (playerBall && !playerBall->attachedObjects.empty())
+		{
+			auto lastAttached = playerBall->attachedObjects.back();
+
+			DirectX::XMFLOAT3 camDir = mCam.GetLook();
+			DirectX::XMVECTOR dirVec = DirectX::XMLoadFloat3(&camDir);
+			dirVec = DirectX::XMVectorSetY(dirVec, DirectX::XMVectorGetY(dirVec) + 0.5f);
+			dirVec = DirectX::XMVector3Normalize(dirVec);
+
+			DirectX::XMFLOAT3 shootDir;
+			DirectX::XMStoreFloat3(&shootDir, dirVec);
+
+			lastAttached->Shoot(shootDir, 15.0f);
+
+			shootCooldown = 0.3f;
+		}
+	}
+	for (auto& [key, obj] : *Objects)
+	{
+		if (key != "ball" && !obj->parent && !obj->isProjectile)
+		{
+			auto it = std::find(ObjectsToCheckForCollision.begin(), ObjectsToCheckForCollision.end(), obj);
+			if (it == ObjectsToCheckForCollision.end())
+				ObjectsToCheckForCollision.push_back(obj);
+		}
+	}
+
 }
 
 

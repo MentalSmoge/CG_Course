@@ -4,7 +4,8 @@
 #include <d3d11.h>
 #include <memory>
 #include "PhysicsComponent.h"
-class GameObject
+class GameObject : public std::enable_shared_from_this<GameObject>
+
 {
 public:
 	struct Transform
@@ -22,6 +23,12 @@ public:
         XMFLOAT3 specular;
         float shininess;
     };
+    bool isProjectile = false;              // летит ли объект
+    DirectX::XMFLOAT3 velocity = { 0,0,0 };    // текущая скорость
+    float gravity = -12.0f;                 // ускорение свободного падения (отрицательное)
+    std::vector<std::shared_ptr<GameObject>> attachedObjects;
+    void Shoot(DirectX::XMFLOAT3 direction, float speed);
+
     MaterialBuffer mb{};
     DirectX::XMFLOAT3 localPosition = { 0,0,0 };
     DirectX::XMFLOAT3 localScale = { 1,1,1 };

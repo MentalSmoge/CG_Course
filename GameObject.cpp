@@ -2,9 +2,6 @@
 #include <iostream>
 
 void GameObject::move(DirectX::XMFLOAT3 direction) {
-    /*visual->transform.position.x += direction.x;
-    visual->transform.position.y += direction.y;
-    visual->transform.position.z += direction.z;*/
     transform.position.x += direction.x;
     transform.position.y += direction.y;
     transform.position.z += direction.z;
@@ -12,9 +9,6 @@ void GameObject::move(DirectX::XMFLOAT3 direction) {
 
 void GameObject::move_teleport(DirectX::XMFLOAT3 new_position)
 {
-    /*visual->transform.position.x = new_position.x;
-    visual->transform.position.y = new_position.y;
-    visual->transform.position.z = new_position.z;*/
     transform.position.x = new_position.x;
     transform.position.y = new_position.y;
     transform.position.z = new_position.z;
@@ -45,25 +39,43 @@ GameObject::GameObject(std::shared_ptr<GameComponent> visuals, XMFLOAT3 size, XM
 
 void GameObject::Update(float deltaTime, float totalTime)
 {
-    if (parent != nullptr)
+    if (isProjectile)
     {
-        XMVECTOR parentPos = XMLoadFloat3(&parent->transform.position);
-        XMVECTOR parentRot = XMLoadFloat4(&parent->transform.rotation);
+        transform.position.x += velocity.x * deltaTime;
+        transform.position.y += velocity.y * deltaTime;
+        transform.position.z += velocity.z * deltaTime;
 
-        XMVECTOR localPos = XMLoadFloat3(&localPosition);
+        velocity.y += gravity * deltaTime;
 
-        XMVECTOR worldPos = XMVectorAdd(parentPos, XMVector3Rotate(localPos, parentRot));
-        XMStoreFloat3(&transform.position, worldPos);
+        if (transform.position.y <= -1.0f)
+        {
+            transform.position.y = -1.0f;
+            velocity = { 0,0,0 };
+            isProjectile = false;
+        }
 
-        XMVECTOR localRot = XMLoadFloat4(&localRotation);
-        XMVECTOR worldRot = XMQuaternionMultiply(localRot, parentRot);
-        XMStoreFloat4(&transform.rotation, worldRot);
-
+        UpdateBoundingBox();
     }
-    UpdateBoundingBox();
+    else
+    {
+        if (parent != nullptr)
+        {
+            DirectX::XMVECTOR parentPos = DirectX::XMLoadFloat3(&parent->transform.position);
+            DirectX::XMVECTOR parentRot = DirectX::XMLoadFloat4(&parent->transform.rotation);
+            DirectX::XMVECTOR localPos = DirectX::XMLoadFloat3(&localPosition);
+            DirectX::XMVECTOR worldPos = DirectX::XMVectorAdd(parentPos, DirectX::XMVector3Rotate(localPos, parentRot));
+            DirectX::XMStoreFloat3(&transform.position, worldPos);
+
+            DirectX::XMVECTOR localRot = DirectX::XMLoadFloat4(&localRotation);
+            DirectX::XMVECTOR worldRot = DirectX::XMQuaternionMultiply(localRot, parentRot);
+            DirectX::XMStoreFloat4(&transform.rotation, worldRot);
+        }
+        UpdateBoundingBox();
+    }
+
     visual->Update(deltaTime, totalTime);
-    
 }
+
 
 void GameObject::Draw(ID3D11DeviceContext* context)
 {
@@ -93,21 +105,29 @@ void GameObject::AttachToParent(std::shared_ptr<GameObject> newParent)
 {
     if (!newParent || parent == newParent) return;
 
+    if (parent)
+    {
+        auto it = std::find(parent->attachedObjects.begin(), parent->attachedObjects.end(), shared_from_this());
+        if (it != parent->attachedObjects.end())
+            parent->attachedObjects.erase(it);
+    }
+
     parent = newParent;
 
-    XMVECTOR worldPos = XMLoadFloat3(&transform.position);
-    XMVECTOR parentPos = XMLoadFloat3(&parent->transform.position);
-    XMVECTOR parentRot = XMLoadFloat4(&parent->transform.rotation);
+    parent->attachedObjects.push_back(shared_from_this());
 
-    XMVECTOR offset = XMVectorSubtract(worldPos, parentPos);
+    DirectX::XMVECTOR worldPos = DirectX::XMLoadFloat3(&transform.position);
+    DirectX::XMVECTOR parentPos = DirectX::XMLoadFloat3(&parent->transform.position);
+    DirectX::XMVECTOR parentRot = DirectX::XMLoadFloat4(&parent->transform.rotation);
+    DirectX::XMVECTOR offset = DirectX::XMVectorSubtract(worldPos, parentPos);
+    DirectX::XMVECTOR localPos = DirectX::XMVector3Rotate(offset, DirectX::XMQuaternionInverse(parentRot));
+    DirectX::XMStoreFloat3(&localPosition, localPos);
 
-    XMVECTOR localPos = XMVector3Rotate(offset, XMQuaternionInverse(parentRot));
-    XMStoreFloat3(&localPosition, localPos);
-
-    XMVECTOR worldRot = XMLoadFloat4(&transform.rotation);
-    XMVECTOR localRot = XMQuaternionMultiply(worldRot, XMQuaternionInverse(parentRot));
-    XMStoreFloat4(&localRotation, localRot);
+    DirectX::XMVECTOR worldRot = DirectX::XMLoadFloat4(&transform.rotation);
+    DirectX::XMVECTOR localRot = DirectX::XMQuaternionMultiply(worldRot, DirectX::XMQuaternionInverse(parentRot));
+    DirectX::XMStoreFloat4(&localRotation, localRot);
 }
+
 
 void GameObject::Rotate(XMFLOAT3 axis, float angle)
 {
@@ -120,4 +140,22 @@ void GameObject::Rotate(XMFLOAT3 axis, float angle)
 void GameObject::SetScale(float s)
 {
     transform.scale = { s, s, s };
+}
+
+void GameObject::Shoot(DirectX::XMFLOAT3 direction, float speed)
+{
+    if (parent)
+    {
+        auto it = std::find(parent->attachedObjects.begin(), parent->attachedObjects.end(), shared_from_this());
+        if (it != parent->attachedObjects.end())
+            parent->attachedObjects.erase(it);
+        parent = nullptr;
+    }
+
+    DirectX::XMVECTOR dirVec = DirectX::XMLoadFloat3(&direction);
+    dirVec = DirectX::XMVector3Normalize(dirVec);
+    DirectX::XMStoreFloat3(&velocity, dirVec * speed);
+    if (transform.position.y < -0.99)
+        transform.position.y = -0.99;
+    isProjectile = true;
 }
