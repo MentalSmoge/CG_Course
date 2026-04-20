@@ -48,8 +48,8 @@ void Game::Draw(float deltaTime)
 		XMVectorSet(0, 1, 0, 0)
 	);
 
-	XMMATRIX lightProj = XMMatrixOrthographicLH(50.0f, 50.0f, 0.1f, 100.0f);
-	XMVECTOR lightPos = XMVectorSet(-10, 100, -10, 1);
+	XMMATRIX lightProj = XMMatrixOrthographicLH(100.0f, 100.0f, 0.01f, 100.0f);
+	XMVECTOR lightPos = XMVectorSet(0, 100, 0, 1);
 	XMVECTOR lightTarget = XMVectorZero();
 	XMVECTOR lightDirVec = XMVector3Normalize(lightTarget - lightPos);
 	XMStoreFloat3(&lb.lightDir, lightDirVec);

@@ -2,9 +2,6 @@
 #include <iostream>
 
 void GameObject::move(DirectX::XMFLOAT3 direction) {
-    /*visual->transform.position.x += direction.x;
-    visual->transform.position.y += direction.y;
-    visual->transform.position.z += direction.z;*/
     transform.position.x += direction.x;
     transform.position.y += direction.y;
     transform.position.z += direction.z;
@@ -12,9 +9,6 @@ void GameObject::move(DirectX::XMFLOAT3 direction) {
 
 void GameObject::move_teleport(DirectX::XMFLOAT3 new_position)
 {
-    /*visual->transform.position.x = new_position.x;
-    visual->transform.position.y = new_position.y;
-    visual->transform.position.z = new_position.z;*/
     transform.position.x = new_position.x;
     transform.position.y = new_position.y;
     transform.position.z = new_position.z;

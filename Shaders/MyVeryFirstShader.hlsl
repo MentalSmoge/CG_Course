@@ -92,9 +92,10 @@ float ShadowCalculation(float4 lightSpacePos, float3 N, float3 L)
     // перевод в [0,1]
     projCoords = projCoords * 0.5f + 0.5f;
     projCoords.y = 1.0f - projCoords.y;
+    projCoords.z = 1.0f - projCoords.z;
     // если вне shadow map Ч не в тени
     if (projCoords.x < 0 || projCoords.x > 1 ||
-        projCoords.y < 0 || projCoords.y > 1)
+    projCoords.y < 0 || projCoords.y > 1)
         return 1.0f;
     float bias = max(0.001f * (1.0f - dot(N, L)), 0.0005f);
     //float bias = 0.05f;
