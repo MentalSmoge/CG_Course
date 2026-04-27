@@ -23,6 +23,12 @@ public:
         XMFLOAT3 specular;
         float shininess;
     };
+    bool hasPointLight = false;
+    DirectX::XMFLOAT3 pointLightColor = { 1.0f, 0.8f, 0.5f };
+    float pointLightRange = 20.0f;
+    float pointLightIntensity = 2.0f;
+
+    void EnablePointLight(bool enable) { hasPointLight = enable; }
     bool isProjectile = false;              // летит ли объект
     DirectX::XMFLOAT3 velocity = { 0,0,0 };    // текущая скорость
     float gravity = -12.0f;                 // ускорение свободного падения (отрицательное)

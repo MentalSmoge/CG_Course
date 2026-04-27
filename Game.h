@@ -89,7 +89,24 @@ public:
 	enum GoalResult;
 	GoalResult CheckGoal(GameObject& ball, float leftBound, float rightBound);
 	Camera mCam{};
-
+	struct PointLightBuffer
+	{
+		DirectX::XMFLOAT3 Position;
+		float             Range;
+		DirectX::XMFLOAT3 Color;
+		float             Intensity;
+		uint32_t          Enabled;
+		DirectX::XMFLOAT3 Padding;
+	};
+	const int MAX_POINT_LIGHTS = 8;
+	struct PointLightArray
+	{
+		PointLightBuffer lights[8];
+		uint32_t numPointLights;
+		DirectX::XMFLOAT3 padding;
+	};
+	ID3D11Buffer* pointLightCB = nullptr;
+	std::shared_ptr<GameObject> currentProjectile;
 private:
 	// Ресурсы карты теней
 	ID3D11Texture2D* shadowMapTex = nullptr;
@@ -110,7 +127,6 @@ private:
 
 	// Метод рендеринга карты теней
 	void RenderShadowMap();
-
 	ID3D11RasterizerState* rastState;
 	ShaderProgram shaderProgram;
 	XMMATRIX currentLightViewProj;  // Сохраняем матрицу для использования в Draw

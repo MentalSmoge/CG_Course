@@ -1,5 +1,7 @@
 #pragma shader_model 5_0
 
+#define MAX_POINT_LIGHTS 8
+
 struct VS_IN
 {
     float4 pos : POSITION0;
@@ -62,13 +64,75 @@ cbuffer ShadowBuffer : register(b5)
     matrix lightViewProj;
 };
 
+struct PointLight
+{
+    float3 Position;
+    float Range;
+    float3 Color;
+    float Intensity;
+    uint Enabled;
+    float3 Padding;
+};
+
+cbuffer PointLightCB : register(b6)
+{
+    PointLight pointLights[MAX_POINT_LIGHTS];
+    uint numPointLights;
+    float3 padding6;
+};
+
 Texture2D tex : register(t0);
 SamplerState samp : register(s0);
 
 Texture2D shadowMap : register(t1);
 SamplerComparisonState shadowSampler : register(s1);
 
-static const float SHADOW_BIAS = 0.005f;
+// Функция расчёта точечного освещения
+float3 CalcPointLight(float3 worldPos, float3 normal, float3 viewDir, PointLight light, float shininess)
+{
+    if (light.Enabled == 0)
+        return float3(0, 0, 0);
+    
+    float3 lightVec = light.Position - worldPos;
+    float distance = length(lightVec);
+    if (distance > light.Range)
+        return float3(0, 0, 0);
+    
+    float attenuation = 1.0 - smoothstep(0.0, light.Range, distance);
+    attenuation *= attenuation;
+    
+    float3 L = lightVec / distance;
+    float3 H = normalize(L + viewDir);
+    
+    float diff = max(dot(normal, L), 0.0);
+    float spec = pow(max(dot(normal, H), 0.0), shininess);
+    
+    float3 diffuseLighting = diffuse * diff;
+    float3 specularLighting = specular * spec;
+    
+    return (diffuseLighting + specularLighting) * light.Color * light.Intensity * attenuation;
+}
+
+float CalcShadowFactor(float4 lightSpacePos)
+{
+    float3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
+    
+    float2 shadowTexCoord;
+    shadowTexCoord.x = 0.5f + (projCoords.x * 0.5f);
+    shadowTexCoord.y = 0.5f - (projCoords.y * 0.5f);
+    
+    if (shadowTexCoord.x < 0.0f || shadowTexCoord.x > 1.0f ||
+        shadowTexCoord.y < 0.0f || shadowTexCoord.y > 1.0f ||
+        projCoords.z < 0.0f || projCoords.z > 1.0f)
+    {
+        return 1.0f;
+    }
+    
+    float bias = 0.005f;
+    float currentDepth = projCoords.z - bias;
+    float shadow = shadowMap.SampleCmpLevelZero(shadowSampler, shadowTexCoord, currentDepth);
+    return shadow;
+}
 
 PS_IN VSMain(VS_IN input, uint vertexID : SV_VertexID)
 {
@@ -90,44 +154,37 @@ PS_IN VSMain(VS_IN input, uint vertexID : SV_VertexID)
     return output;
 }
 
-float CalcShadowFactor(float4 lightSpacePos)
-{
-    float3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
-    
-    float2 shadowTexCoord;
-    shadowTexCoord.x = 0.5f + (projCoords.x * 0.5f);
-    shadowTexCoord.y = 0.5f - (projCoords.y * 0.5f);
-    
-    if (shadowTexCoord.x < 0.0f || shadowTexCoord.x > 1.0f ||
-        shadowTexCoord.y < 0.0f || shadowTexCoord.y > 1.0f ||
-        projCoords.z < 0.0f || projCoords.z > 1.0f)
-    {
-        return 1.0f;
-    }
-    float bias = 0.005f;
-    float currentDepth = projCoords.z - bias;
-    float shadow = shadowMap.SampleCmpLevelZero(shadowSampler, shadowTexCoord, currentDepth);
-    return shadow;
-}
-
 float4 PSMain(PS_IN input) : SV_Target
 {
     float3 N = normalize(input.normal);
     float3 L = normalize(-lightDir);
-
-    float diff = max(dot(N, L), 0.0);
-
     float3 V = normalize(cameraPos - input.worldPos);
     float3 R = reflect(-L, N);
+
+    float diff = max(dot(N, L), 0.0);
     float spec = pow(max(dot(V, R), 0.0), shininess);
     
     float shadowFactor = CalcShadowFactor(input.lightSpacePos);
 
-    float3 color = ambient +
-                   diffuse * diff * shadowFactor +
-                   specular * spec * shadowFactor;
-
+    // Направленное освещение с использованием lightColor
+    float3 directionalLight = (diffuse * diff + specular * spec) * lightColor * shadowFactor;
+    
+    // Ambient освещение (нейтральное, умножается на diffuse материала)
+    float3 ambientLight = ambient * diffuse;
+    
+    // Точечное освещение от всех источников
+    float3 pointLighting = float3(0, 0, 0);
+    for (uint i = 0; i < numPointLights && i < MAX_POINT_LIGHTS; i++)
+    {
+        pointLighting += CalcPointLight(input.worldPos, N, V, pointLights[i], shininess);
+    }
+    
+    // Суммируем все источники света
+    float3 lighting = ambientLight + directionalLight + pointLighting;
+    
+    // Получаем цвет текстуры
     float4 texColor = tex.Sample(samp, input.uv);
     
-    return float4(color, 1.0) * texColor;
+    // Финальный цвет
+    return float4(lighting, 1.0) * texColor * input.col;
 }

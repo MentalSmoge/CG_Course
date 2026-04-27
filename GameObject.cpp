@@ -52,6 +52,7 @@ void GameObject::Update(float deltaTime, float totalTime)
             transform.position.y = -1.0f;
             velocity = { 0,0,0 };
             isProjectile = false;
+            //hasPointLight = false;
         }
 
         UpdateBoundingBox();

@@ -41,7 +41,7 @@ public:
                 mesh->mNormals[i].z
             };
 
-            v.color = { 1,0,0,1 };
+            v.color = { 1,1,1,1 };
 
             if (mesh->mTextureCoords[0])
             {

@@ -139,6 +139,26 @@ void Game::Draw(float deltaTime)
 	Device.context->UpdateSubresource(shadowCB, 0, nullptr, &sb, 0, 0);
 	Device.context->VSSetConstantBuffers(5, 1, &shadowCB);
 	Device.context->PSSetConstantBuffers(5, 1, &shadowCB);
+	PointLightArray plArray = {};
+	plArray.numPointLights = 0;
+
+	for (auto& [key, obj] : *Objects)
+	{
+		if (obj->hasPointLight && plArray.numPointLights < MAX_POINT_LIGHTS)
+		{
+			auto& light = plArray.lights[plArray.numPointLights];
+			light.Position = obj->transform.position;
+			light.Range = obj->pointLightRange;
+			light.Color = obj->pointLightColor;
+			light.Intensity = obj->pointLightIntensity;
+			light.Enabled = 1;
+
+			plArray.numPointLights++;
+		}
+	}
+
+	Device.context->UpdateSubresource(pointLightCB, 0, nullptr, &plArray, 0, 0);
+	Device.context->PSSetConstantBuffers(6, 1, &pointLightCB);
 
 	for (auto& [key, value] : *Objects)
 	{
@@ -343,50 +363,47 @@ void Game::CreateObjects()
 	CreateModelObject("ball2", "Models/beach_ball.glb", XMFLOAT3{ 10.5f,10,10.1f }, { 7.15f, 0, -2 });
 	GetGameObject("ball2")->SetScale(0.1f);
 	ObjectsToCheckForCollision.push_back(GetGameObject("ball2"));
-	//GetGameObject("ball2")->move({ 7.15f, 0, -2 });
 	GetGameObject("ball2")->mb.shininess = 89.6f;
 	GetGameObject("ball2")->mb.specular = { 0.773911f, 0.773911f, 0.773911f };
 	GetGameObject("ball2")->mb.diffuse = { 0.2775f, 0.2775f, 0.2775f };
 	GetGameObject("ball2")->mb.ambient = { 0.23125f, 0.23125f, 0.23125f };
+	GetGameObject("ball2")->pointLightColor = { 0.2f, 0.6f, 1.0f };
 
-	CreateModelObject("toilet", "Models/shrek_toilet.glb", XMFLOAT3 {0.5f,1,0.1f}, { 5.15f, 2, 0 });
-	GetGameObject("toilet")->visual->transform.offset = XMFLOAT3{ -0, -1.5, -1.0 };
-	//GetGameObject("toilet")->move({ 5.15f, 2, 0 });
-	GetGameObject("toilet")->SetScale(2.15f);
-	ObjectsToCheckForCollision.push_back(GetGameObject("toilet"));
+	//CreateModelObject("toilet", "Models/shrek_toilet.glb", XMFLOAT3 {0.5f,1,0.1f}, { 5.15f, 2, 0 });
+	//GetGameObject("toilet")->visual->transform.offset = XMFLOAT3{ -0, -1.5, -1.0 };
+	////GetGameObject("toilet")->move({ 5.15f, 2, 0 });
+	//GetGameObject("toilet")->SetScale(2.15f);
+	//ObjectsToCheckForCollision.push_back(GetGameObject("toilet"));
 
 	CreateModelObject("table", "Models/end_table.glb", XMFLOAT3{ 10.5f,10,10.1f }, { -5.15f, 0, 0 });
-	//GetGameObject("table")->move({ -5.15f, 0, 0 });
 	GetGameObject("table")->SetScale(0.04f);
 	ObjectsToCheckForCollision.push_back(GetGameObject("table"));
 	GetGameObject("table")->mb.shininess = 27.8974;
 	GetGameObject("table")->mb.specular = { 0.992157f, 0.941176f, 0.807843f };
 	GetGameObject("table")->mb.diffuse = { 0.780392f, 0.568627f, 0.113725f };
 	GetGameObject("table")->mb.ambient = { 0.329412f, 0.223529f, 0.027451f };
+	GetGameObject("table")->pointLightColor = { 0.0f, 1.0f, 0.0f };
 
 	CreateModelObject("table2", "Models/end_table.glb", XMFLOAT3{ 10.5f,10,10.1f }, { -5.15f, 0, 4 });
-	//GetGameObject("table2")->move({ -5.15f, 0, 4 });
 	GetGameObject("table2")->SetScale(0.04f);
 	ObjectsToCheckForCollision.push_back(GetGameObject("table2"));
 
 	CreateModelObject("dino", "Models/allosaurus_carnivores.glb", XMFLOAT3{ 10.5f,10,10.1f }, { -0, 0, 5 });
-	//GetGameObject("dino")->move({ -0, 0, 5 });
 	GetGameObject("dino")->SetScale(0.02f);
 	ObjectsToCheckForCollision.push_back(GetGameObject("dino"));
 	GetGameObject("dino")->mb.shininess = 32;
 	GetGameObject("dino")->mb.specular = { 0.5f, 0.5f, 0.5f };
 	GetGameObject("dino")->mb.diffuse = { 0.01f, 0.01f, 0.01f };
 	GetGameObject("dino")->mb.ambient = { 0.0f, 0.0f, 0.0f };
+	GetGameObject("dino")->pointLightColor = { 1.0f, 0.0f, 0.0f }; 
 
 	CreateModelObject("dino2", "Models/allosaurus_carnivores.glb", XMFLOAT3{ 10.5f,10,10.1f }, { -3, 0, 5 });
-	//GetGameObject("dino2")->move({ -3, 0, 5 });
 	GetGameObject("dino2")->SetScale(0.02f);
+	GetGameObject("dino2")->pointLightColor = { 0.8f, 0.0f, 1.0f };
 	ObjectsToCheckForCollision.push_back(GetGameObject("dino2"));
 
 	CreateModelObject("floor", "Models/checkered_tile_floor.glb", XMFLOAT3{ 0.5f,0.1f,0.1f }, { -0, -1.5, 0 });
-	//GetGameObject("floor")->move({ -0, -1.5, 0});
 	GetGameObject("floor")->Rotate(XMFLOAT3(1.0f, 0.0f, 0.0f), -XM_PIDIV2);
-	//GetGameObject("floor")->SetScale(0.02f);
 }
 
 void Game::ChangeMouseModeToFPS()
@@ -617,6 +634,12 @@ void Game::Initialize()
 
 	Device.device->CreateSamplerState(&sampDesc, &sampler);
 	Device.context->PSSetSamplers(0, 1, &sampler);
+
+	D3D11_BUFFER_DESC plDesc = {};
+	plDesc.Usage = D3D11_USAGE_DEFAULT;
+	plDesc.ByteWidth = sizeof(PointLightArray);
+	plDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	Device.device->CreateBuffer(&plDesc, nullptr, &pointLightCB);
 }
 
 void Game::PrepareFrame()
@@ -779,6 +802,7 @@ void Game::Update(float deltaTime)
 			DirectX::XMStoreFloat3(&shootDir, dirVec);
 
 			lastAttached->Shoot(shootDir, 15.0f);
+			lastAttached->EnablePointLight(true);
 
 			shootCooldown = 0.3f;
 		}
