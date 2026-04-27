@@ -29,9 +29,9 @@ public:
     float pointLightIntensity = 2.0f;
 
     void EnablePointLight(bool enable) { hasPointLight = enable; }
-    bool isProjectile = false;              // летит ли объект
-    DirectX::XMFLOAT3 velocity = { 0,0,0 };    // текущая скорость
-    float gravity = -12.0f;                 // ускорение свободного падения (отрицательное)
+    bool isProjectile = false;              
+    DirectX::XMFLOAT3 velocity = { 0,0,0 };    
+    float gravity = -9.8f;                 
     std::vector<std::shared_ptr<GameObject>> attachedObjects;
     void Shoot(DirectX::XMFLOAT3 direction, float speed);
 

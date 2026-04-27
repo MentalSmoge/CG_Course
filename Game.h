@@ -43,7 +43,6 @@ public:
 		float pad;
 	};
 
-	// Новый буфер для матрицы преобразования в пространство источника света
 	struct ShadowBuffer
 	{
 		DirectX::XMMATRIX lightViewProj;
@@ -60,7 +59,7 @@ public:
 	ID3D11Buffer* materialCB = nullptr;
 	ID3D11Buffer* cameraPSCB = nullptr;
 	ID3D11Buffer* worldCB = nullptr;
-	ID3D11Buffer* shadowCB = nullptr;   // константный буфер для матрицы света
+	ID3D11Buffer* shadowCB = nullptr;
 
 	std::vector<std::shared_ptr<GameComponent>> triangles;
 	DirectXDevice Device;
@@ -124,19 +123,16 @@ private:
 	ID3D11ShaderResourceView* paletteSRV = nullptr;
 	ID3D11Buffer* shadowTintCB = nullptr;
 	float shadowMaxDistance = 50.0f;
-	float shadowTintStrength = 0.7f;
+	float shadowTintStrength = 0.9f;
 	// Размер карты теней
 	static constexpr UINT SHADOW_MAP_SIZE = 2048*4;
 
-	// Шейдер для рендеринга глубины (теней)
 	ShaderProgram shadowShaderProgram;
 
-	// Настройки источника света (солнце)
 	XMFLOAT3 lightDirection = XMFLOAT3(0.7f, -1.0f, 0.7f);
 	float    lightDistance = 200.0f;   // расстояние от центра сцены до источника
 	float    lightOrthoSize = 200.0f;   // размер ортогональной проекции
 
-	// Метод рендеринга карты теней
 	void RenderShadowMap();
 	ID3D11RasterizerState* rastState;
 	ShaderProgram shaderProgram;

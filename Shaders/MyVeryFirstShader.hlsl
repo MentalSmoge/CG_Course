@@ -94,7 +94,6 @@ Texture2D shadowMap : register(t1);
 Texture2D paletteTex : register(t2);
 SamplerComparisonState shadowSampler : register(s1);
 
-// Функция расчёта точечного освещения
 float3 CalcPointLight(float3 worldPos, float3 normal, float3 viewDir, PointLight light, float shininess)
 {
     if (light.Enabled == 0)
@@ -172,27 +171,19 @@ float4 PSMain(PS_IN input) : SV_Target
     float spec = pow(max(dot(V, R), 0.0), shininess);
     
     float shadowFactor = CalcShadowFactor(input.lightSpacePos);
-
-    // ====== Новый блок: цвет тени на основе расстояния ======
+    
     float distToCamera = length(cameraPos - input.worldPos);
-    // Нормализуем в диапазон 0..1, где 0 – близко, 1 – далеко
     float shadowU = saturate(distToCamera / maxShadowDist);
     
-    // Сэмплируем палитру (используем тот же сэмплер samp, или отдельный, если нужно другое фильтрование)
     float3 shadowColor = paletteTex.Sample(samp, float2(shadowU, 0.5f)).rgb;
     
-    // Маска тени: 0 = полностью в тени, 1 = нет тени
     float shadowAmount = 1.0 - shadowFactor;
-    // =========================================================
-
-    // Стандартное направленное освещение с учётом shadowFactor (останется чёрным в тени)
+    
     float3 fullLightDir = (diffuse * diff + specular * spec) * lightColor;
     float3 directionalLight = fullLightDir * shadowFactor;
     
-    // Добавляем цветную тень в затемнённые области
     directionalLight += fullLightDir * shadowColor * shadowAmount * shadowTintStrength;
-
-    // Остальное без изменений
+    
     float3 ambientLight = ambient * diffuse;
     
     float3 pointLighting = float3(0, 0, 0);
