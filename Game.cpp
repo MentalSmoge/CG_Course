@@ -109,6 +109,13 @@ void Game::Draw(float deltaTime)
 {
 	RenderShadowMap();
 
+	Device.context->PSSetShaderResources(2, 1, &paletteSRV);
+	ShadowTintParams stParams;
+	stParams.maxShadowDist = shadowMaxDistance;
+	stParams.shadowTintStrength = shadowTintStrength;
+	Device.context->UpdateSubresource(shadowTintCB, 0, nullptr, &stParams, 0, 0);
+	Device.context->PSSetConstantBuffers(7, 1, &shadowTintCB);
+
 	mCam.UpdateViewMatrix();
 
 	CameraBuffer cb{};
@@ -204,9 +211,12 @@ void Game::Draw(float deltaTime)
 
 	ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
 	Device.context->PSSetShaderResources(1, 1, nullSRV);
+	Device.context->PSSetShaderResources(2, 1, nullSRV);
 
 	ID3D11SamplerState* nullSampler[1] = { nullptr };
 	Device.context->PSSetSamplers(1, 1, nullSampler);
+
+
 }
 
 void Game::EndFrame()
@@ -368,6 +378,9 @@ void Game::CreateObjects()
 	GetGameObject("ball2")->mb.diffuse = { 0.2775f, 0.2775f, 0.2775f };
 	GetGameObject("ball2")->mb.ambient = { 0.23125f, 0.23125f, 0.23125f };
 	GetGameObject("ball2")->pointLightColor = { 0.2f, 0.6f, 1.0f };
+
+
+	CreateModelObject("ball3", "Models/beach_ball.glb", XMFLOAT3{ 10.5f,10,10.1f }, { -40.15f, 25, -40 });
 
 	//CreateModelObject("toilet", "Models/shrek_toilet.glb", XMFLOAT3 {0.5f,1,0.1f}, { 5.15f, 2, 0 });
 	//GetGameObject("toilet")->visual->transform.offset = XMFLOAT3{ -0, -1.5, -1.0 };
@@ -640,6 +653,23 @@ void Game::Initialize()
 	plDesc.ByteWidth = sizeof(PointLightArray);
 	plDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	Device.device->CreateBuffer(&plDesc, nullptr, &pointLightCB);
+
+
+
+	HRESULT hr = DirectX::CreateWICTextureFromFile(
+		Device.device,
+		Device.context,  // можно передать nullptr, если контекст не нужен
+		L"palette.png",
+		nullptr,  // не нужен объект текстуры
+		&paletteSRV
+	);
+
+	D3D11_BUFFER_DESC stDesc = {};
+	stDesc.Usage = D3D11_USAGE_DEFAULT;
+	stDesc.ByteWidth = sizeof(ShadowTintParams);
+	stDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	Device.device->CreateBuffer(&stDesc, nullptr, &shadowTintCB);
+
 }
 
 void Game::PrepareFrame()

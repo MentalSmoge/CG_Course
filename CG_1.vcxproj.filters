@@ -56,6 +56,7 @@
     <FxCompile Include="Shaders\MyVeryFirstShader.hlsl">
       <Filter>Source Files</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\ShadowMap.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game.h">
@@ -121,5 +122,11 @@
     <None Include="Models\allosaurus_carnivores.glb">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="Models\checkered_tile_floor.glb" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="palette.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

@@ -80,11 +80,18 @@ cbuffer PointLightCB : register(b6)
     uint numPointLights;
     float3 padding6;
 };
+cbuffer ShadowTintParams : register(b7)
+{
+    float maxShadowDist;
+    float shadowTintStrength;
+    float2 padding7;
+};
 
 Texture2D tex : register(t0);
 SamplerState samp : register(s0);
 
 Texture2D shadowMap : register(t1);
+Texture2D paletteTex : register(t2);
 SamplerComparisonState shadowSampler : register(s1);
 
 // Функция расчёта точечного освещения
@@ -166,25 +173,37 @@ float4 PSMain(PS_IN input) : SV_Target
     
     float shadowFactor = CalcShadowFactor(input.lightSpacePos);
 
-    // Направленное освещение с использованием lightColor
-    float3 directionalLight = (diffuse * diff + specular * spec) * lightColor * shadowFactor;
+    // ====== Новый блок: цвет тени на основе расстояния ======
+    float distToCamera = length(cameraPos - input.worldPos);
+    // Нормализуем в диапазон 0..1, где 0 – близко, 1 – далеко
+    float shadowU = saturate(distToCamera / maxShadowDist);
     
-    // Ambient освещение (нейтральное, умножается на diffuse материала)
+    // Сэмплируем палитру (используем тот же сэмплер samp, или отдельный, если нужно другое фильтрование)
+    float3 shadowColor = paletteTex.Sample(samp, float2(shadowU, 0.5f)).rgb;
+    
+    // Маска тени: 0 = полностью в тени, 1 = нет тени
+    float shadowAmount = 1.0 - shadowFactor;
+    // =========================================================
+
+    // Стандартное направленное освещение с учётом shadowFactor (останется чёрным в тени)
+    float3 fullLightDir = (diffuse * diff + specular * spec) * lightColor;
+    float3 directionalLight = fullLightDir * shadowFactor;
+    
+    // Добавляем цветную тень в затемнённые области
+    directionalLight += fullLightDir * shadowColor * shadowAmount * shadowTintStrength;
+
+    // Остальное без изменений
     float3 ambientLight = ambient * diffuse;
     
-    // Точечное освещение от всех источников
     float3 pointLighting = float3(0, 0, 0);
     for (uint i = 0; i < numPointLights && i < MAX_POINT_LIGHTS; i++)
     {
         pointLighting += CalcPointLight(input.worldPos, N, V, pointLights[i], shininess);
     }
     
-    // Суммируем все источники света
     float3 lighting = ambientLight + directionalLight + pointLighting;
     
-    // Получаем цвет текстуры
     float4 texColor = tex.Sample(samp, input.uv);
     
-    // Финальный цвет
     return float4(lighting, 1.0) * texColor * input.col;
 }

@@ -11,6 +11,7 @@
 #include "GameObject.h"
 #include "Camera.h"
 #include "OrbitObject.h"
+#include <WICTextureLoader.h>
 
 class InputDevice;
 class DisplayWin32;
@@ -46,6 +47,12 @@ public:
 	struct ShadowBuffer
 	{
 		DirectX::XMMATRIX lightViewProj;
+	};
+	struct ShadowTintParams
+	{
+		float maxShadowDist;
+		float shadowTintStrength;
+		float padding[2];
 	};
 
 	ID3D11Buffer* cameraCB = nullptr;
@@ -114,6 +121,10 @@ private:
 	ID3D11ShaderResourceView* shadowMapSRV = nullptr;
 	ID3D11SamplerState* shadowSampler = nullptr;
 	ID3D11Buffer* shadowWorldCB = nullptr;
+	ID3D11ShaderResourceView* paletteSRV = nullptr;
+	ID3D11Buffer* shadowTintCB = nullptr;
+	float shadowMaxDistance = 50.0f;
+	float shadowTintStrength = 0.7f;
 	// Размер карты теней
 	static constexpr UINT SHADOW_MAP_SIZE = 2048*4;
 
